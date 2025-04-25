@@ -277,12 +277,17 @@ local function remove_tile(map, x, y)
 	--print(end_time - start_time)
 end
 
+-- Определяем границы прямоугольника
+local function get_rect_border(start_point, end_point)
+	return
+	math.min(start_point.y, end_point.y),  -- start_y
+	math.max(start_point.y, end_point.y),  -- end_y
+	math.min(start_point.x, end_point.x),  -- start_x
+	math.max(start_point.x, end_point.x)   -- end_x
+end
+
 local function delete_region_without_update(plan_map, start_point, end_point)
-	-- Определяем границы прямоугольника
-	local start_y = math.min(start_point.y, end_point.y)
-	local end_y = math.max(start_point.y, end_point.y)
-	local start_x = math.min(start_point.x, end_point.x)
-	local end_x = math.max(start_point.x, end_point.x)
+	local start_y, end_y, start_x, end_x = get_rect_border(start_point, end_point)
 
 	for y = start_y, end_y do
 		for x = start_x, end_x do
@@ -293,11 +298,7 @@ local function delete_region_without_update(plan_map, start_point, end_point)
 end
 
 local function delete_region_and_update(plan_map, ref_map, start_point, end_point)
-	-- Определяем границы прямоугольника
-	local start_y = math.min(start_point.y, end_point.y)
-	local end_y = math.max(start_point.y, end_point.y)
-	local start_x = math.min(start_point.x, end_point.x)
-	local end_x = math.max(start_point.x, end_point.x)
+	local start_y, end_y, start_x, end_x = get_rect_border(start_point, end_point)
 
 	for y = start_y, end_y do
 		for x = start_x, end_x do
@@ -307,14 +308,8 @@ local function delete_region_and_update(plan_map, ref_map, start_point, end_poin
 end
 
 local function create_region(plan_map, ref_map, start_point, end_point)
-	-- Определяем границы прямоугольника
-	local start_time = os.clock()
-	local start_y = math.min(start_point.y, end_point.y)
-	local end_y = math.max(start_point.y, end_point.y)
-	local start_x = math.min(start_point.x, end_point.x)
-	local end_x = math.max(start_point.x, end_point.x)
+	local start_y, end_y, start_x, end_x = get_rect_border(start_point, end_point)
 
-	-- 1. Добавляем тайлы внутри выделенной области
 	for y = start_y, end_y do
 		for x = start_x, end_x do
 			local plan_tile = plan_map.tiles[y][x]
@@ -338,10 +333,7 @@ local function create_region(plan_map, ref_map, start_point, end_point)
 end
 
 local function create_map_from_region(plan_map, ref_map, start_point, end_point)
-	local start_y = math.min(start_point.y, end_point.y)
-	local end_y = math.max(start_point.y, end_point.y)
-	local start_x = math.min(start_point.x, end_point.x)
-	local end_x = math.max(start_point.x, end_point.x)
+	local start_y, end_y, start_x, end_x = get_rect_border(start_point, end_point)
 
 	for y = start_y, end_y do
 		for x = start_x, end_x do
@@ -355,14 +347,8 @@ local function create_map_from_region(plan_map, ref_map, start_point, end_point)
 end
 
 local function create_region_above_ref_tiles(plan_map, ref_map, start_point, end_point)
-	-- Определяем границы прямоугольника
-	local start_time = os.clock()
-	local start_y = math.min(start_point.y, end_point.y)
-	local end_y = math.max(start_point.y, end_point.y)
-	local start_x = math.min(start_point.x, end_point.x)
-	local end_x = math.max(start_point.x, end_point.x)
+	local start_y, end_y, start_x, end_x = get_rect_border(start_point, end_point)
 
-	-- 1. Добавляем тайлы внутри выделенной области
 	for y = start_y, end_y do
 		for x = start_x, end_x do
 			local plan_tile = plan_map.tiles[y][x]
@@ -412,8 +398,6 @@ function init(self)
 	end
 end
 
-function math.clamp(n, low, high) return math.min(math.max(n, low), high) end
-
 function on_input(self, action_id, action)
 	if action.x == 0 and action.y == 0 then
 		return
@@ -423,8 +407,8 @@ function on_input(self, action_id, action)
 	local tile_x, tile_y = world_to_tile(worldx, worldy)
 
 	-- Корректируем координаты, чтобы оставались в пределах карты
-	tile_x = math.clamp(tile_x, 1, Level.main.width)
-	tile_y = math.clamp(tile_y, 1, Level.main.height)
+	tile_x = math.min(math.max(tile_x, 1), Level.main.width)
+	tile_y = math.min(math.max(tile_y, 1), Level.main.height)
 
 	local x, y = tile_to_world(tile_x, tile_y)
 	go.set_position(vmath.vector3(x, y, 1), "/target_cell")
@@ -497,9 +481,16 @@ function on_input(self, action_id, action)
 			return
 		end
 
-		drag_state.is_drag = false
-		delete_region_and_update(Level.main, Level.plan, drag_state.start, drag_state.last_tile)
-		delete_region_without_update(Level.plan, drag_state.start, drag_state.last_tile)
+		if drag_state.to_delete then
+			-- Удаляем тайлы в main, которые были помечены для удаления
+			delete_region_and_update(Level.main, Level.plan, drag_state.start, drag_state.last_tile)
+
+			-- Всегда очищаем выделение в plan
+			delete_region_without_update(Level.plan, drag_state.start, drag_state.last_tile)
+		else
+			-- Режим отката - просто очищаем выделение
+			delete_region_without_update(Level.plan, drag_state.start, drag_state.last_tile)
+		end
 	end
 	--debug_compare_tiles(Level.main)
 end
