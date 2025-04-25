@@ -398,6 +398,8 @@ function init(self)
 	end
 end
 
+function math.clamp(n, low, high) return math.min(math.max(n, low), high) end
+
 function on_input(self, action_id, action)
 	if action.x == 0 and action.y == 0 then
 		return
@@ -407,30 +409,33 @@ function on_input(self, action_id, action)
 	local tile_x, tile_y = world_to_tile(worldx, worldy)
 
 	-- Корректируем координаты, чтобы оставались в пределах карты
-	tile_x = math.min(math.max(tile_x, 1), Level.main.width)
-	tile_y = math.min(math.max(tile_y, 1), Level.main.height)
-
-	local x, y = tile_to_world(tile_x, tile_y)
-	go.set_position(vmath.vector3(x, y, 1), "/target_cell")
+	tile_x = math.clamp(tile_x, 1, Level.main.width)
+	tile_y = math.clamp(tile_y, 1, Level.main.height)
 
 	-- Проверяем, изменилась ли клетка
 	local tile_changed = tile_x ~= drag_state.last_tile.x or tile_y ~= drag_state.last_tile.y
 
-	if drag_state.is_drag and tile_changed then
-		if drag_state.to_delete == false then
-			--local width = math.abs(tile_x - drag_state.start.x) + 1
-			--local height = math.abs(tile_y - drag_state.start.y) + 1
-			--local area = width * height
+	if tile_changed then
 
-			--print("Размер области:", width, "x", height, "=", area, "тайлов")
-			create_region(Level.plan, Level.main, drag_state.start, {x = tile_x, y = tile_y })
-		else
-			create_region_above_ref_tiles(Level.plan, Level.main, drag_state.start, {x = tile_x, y = tile_y })
+		local x, y = tile_to_world(tile_x, tile_y)
+		go.set_position(vmath.vector3(x, y, 1), "/target_cell")
+
+		drag_state.last_tile.x = tile_x
+		drag_state.last_tile.y = tile_y
+
+		if drag_state.is_drag then
+			if drag_state.to_delete == false then
+				--local width = math.abs(tile_x - drag_state.start.x) + 1
+				--local height = math.abs(tile_y - drag_state.start.y) + 1
+				--local area = width * height
+
+				--print("Размер области:", width, "x", height, "=", area, "тайлов")
+				create_region(Level.plan, Level.main, drag_state.start, {x = tile_x, y = tile_y })
+			else
+				create_region_above_ref_tiles(Level.plan, Level.main, drag_state.start, {x = tile_x, y = tile_y })
+			end
 		end
 	end
-
-	drag_state.last_tile.x = tile_x
-	drag_state.last_tile.y = tile_y
 
 	if action_id == hash("btn_left") and action.pressed then
 		if drag_state.is_drag then
@@ -481,6 +486,8 @@ function on_input(self, action_id, action)
 			return
 		end
 
+		drag_state.is_drag = false
+
 		if drag_state.to_delete then
 			-- Удаляем тайлы в main, которые были помечены для удаления
 			delete_region_and_update(Level.main, Level.plan, drag_state.start, drag_state.last_tile)
@@ -492,5 +499,5 @@ function on_input(self, action_id, action)
 			delete_region_without_update(Level.plan, drag_state.start, drag_state.last_tile)
 		end
 	end
-	--debug_compare_tiles(Level.main)
+	--debug_compare_tiles(Level.plan)
 end
