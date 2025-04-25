@@ -2,3 +2,4 @@
 * text=auto
 *.script linguist-language=Lua
 *.lua linguist-detectable=true
+*.go linguist-vendored
