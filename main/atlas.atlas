@@ -1,0 +1,4 @@
+images {
+  image: "/assets/target_cell.png"
+}
+extrude_borders: 2

@@ -1,0 +1,505 @@
+local TILE_MAPPING = {
+	walls = {
+		-- Базовые ортогональные комбинации (16 вариантов)
+		[0]   = {tile_id = 38, transform_bitmask = 0},       -- 0000 0000: Нет соседей
+		[1]   = {tile_id = 30, transform_bitmask = 0},       -- 0000 0001: Только N
+		[2]   = {tile_id = 21, transform_bitmask = tilemap.H_FLIP}, -- 0000 0010: Только E (зеркало)
+		[3]   = {tile_id = 34, transform_bitmask = 0},       -- 0000 0011: N + E
+		[4]   = {tile_id = 22, transform_bitmask = 0},       -- 0000 0100: Только S
+		[5]   = {tile_id = 26, transform_bitmask = 0},       -- 0000 0101: N + S
+		[6]   = {tile_id = 37, transform_bitmask = tilemap.H_FLIP}, -- 0000 0110: E + S (зеркало)
+		[7]   = {tile_id = 28, transform_bitmask = 0},       -- 0000 0111: N + E + S
+		[8]   = {tile_id = 21, transform_bitmask = 0},       -- 0000 1000: Только W
+		[9]   = {tile_id = 34, transform_bitmask = tilemap.H_FLIP}, -- 0000 1001: N + W (зеркало)
+		[10]  = {tile_id = 41, transform_bitmask = 0},       -- 0000 1010: E + W
+		[11]  = {tile_id = 36, transform_bitmask = 0},       -- 0000 1011: N + E + W
+		[12]  = {tile_id = 37, transform_bitmask = 0},       -- 0000 1100: S + W
+		[13]  = {tile_id = 28, transform_bitmask = tilemap.H_FLIP}, -- 0000 1101: N + S + W (зеркало)
+		[14]  = {tile_id = 20, transform_bitmask = 0},       -- 0000 1110: E + S + W
+		[15]  = {tile_id = 69, transform_bitmask = 0},       -- 0000 1111: N + E + S + W
+
+		-- Комбинации с диагоналями (31 вариант)
+		[19]  = {tile_id = 98, transform_bitmask = 0},       -- 0001 0011: N + E + NE
+		[23]  = {tile_id = 102, transform_bitmask = tilemap.H_FLIP}, -- 0001 0111: N + E + S + NE (зеркало)
+		[27]  = {tile_id = 78, transform_bitmask = tilemap.H_FLIP}, -- 0001 1011: N + E + W + NE (зеркало)
+		[31]  = {tile_id = 101, transform_bitmask = tilemap.H_FLIP}, -- 0001 1111: N + E + S + W + NE (зеркало)
+		[41]  = {tile_id = 98, transform_bitmask = tilemap.H_FLIP}, -- 0010 1001: N + W + NW (зеркало)
+		[43]  = {tile_id = 78, transform_bitmask = 0},       -- 0010 1011: N + E + W + NW
+		[45]  = {tile_id = 102, transform_bitmask = 0},      -- 0010 1101: N + S + W + NW
+		[47]  = {tile_id = 101, transform_bitmask = 0},      -- 0010 1111: N + E + S + W + NW
+		[59]  = {tile_id = 99, transform_bitmask = 0},       -- 0011 1011: N + E + W + NE + NW
+		[63]  = {tile_id = 100, transform_bitmask = 0},      -- 0011 1111: N + E + S + W + NE + NW
+		[70]  = {tile_id = 77, transform_bitmask = tilemap.H_FLIP}, -- 0100 0110: E + S + SE (зеркало)
+		[71]  = {tile_id = 70, transform_bitmask = tilemap.H_FLIP}, -- 0100 0111: N + E + S + SE (зеркало)
+		[78]  = {tile_id = 94, transform_bitmask = tilemap.H_FLIP}, -- 0100 1110: E + S + W + SE (зеркало)
+		[79]  = {tile_id = 74, transform_bitmask = 0},       -- 0100 1111: N + E + S + W + SE
+		[87]  = {tile_id = 85, transform_bitmask = 0},       -- 0101 0111: N + E + S + SE + SW
+		[95]  = {tile_id = 93, transform_bitmask = tilemap.H_FLIP}, -- 0101 1111: N + E + S + W + SE + SW (зеркало)
+		[111] = {tile_id = 103, transform_bitmask = tilemap.H_FLIP}, -- 0110 1111: N + E + S + W + SE + NE (зеркало)
+		[127] = {tile_id = 91, transform_bitmask = 0},       -- 0111 1111: N + E + S + W + SE + SW + NE
+		[140] = {tile_id = 77, transform_bitmask = 0},       -- 1000 1100: S + W + SW
+		[141] = {tile_id = 95, transform_bitmask = 0},       -- 1000 1101: N + S + W + SW
+		[142] = {tile_id = 94, transform_bitmask = 0},       -- 1000 1110: E + S + W + SW
+		[143] = {tile_id = 74, transform_bitmask = tilemap.H_FLIP},       -- 1000 1111: N + E + S + W + SW ---------
+		[159] = {tile_id = 103, transform_bitmask = 0},      -- 1001 1111: N + E + S + W + NW + SW
+		[173] = {tile_id = 85, transform_bitmask = tilemap.H_FLIP}, -- 1010 1101: N + S + W + SW (зеркало)
+		[175] = {tile_id = 93, transform_bitmask = 0},       -- 1010 1111: N + E + S + W + SW + NW
+		[191] = {tile_id = 91, transform_bitmask = tilemap.H_FLIP}, -- 1011 1111: N + E + S + W + SW + NW + SE (зеркало)
+		[206] = {tile_id = 76, transform_bitmask = 0},       -- 1100 1110: E + S + W + SE + SW
+		[207] = {tile_id = 75, transform_bitmask = 0},       -- 1100 1111: N + E + S + W + SE + SW
+		[223] = {tile_id = 86, transform_bitmask = tilemap.H_FLIP}, -- 1101 1111: N + E + S + W + SE + SW + NW (зеркало)
+		[239] = {tile_id = 86, transform_bitmask = 0},       -- 1110 1111: N + E + S + W + SE + SW + NE
+		[255] = {tile_id = 84, transform_bitmask = 0}        -- 1111 1111: Все направления + все диагонали
+	}
+}
+local drag_state = {
+	is_drag = false,
+	to_delete = false,
+	start = {x = 0, y = 0},
+	last_tile = {x = 0, y = 0}
+}
+
+local TILE_SIZE = 8
+local DIRECTION_MASKS = {
+	N  = 1,    -- Север (0001)
+	E  = 2,    -- Восток (0010)
+	S  = 4,    -- Юг (0100)
+	W  = 8,    -- Запад (1000)
+	NE = 16,   -- Северо-восток (0001 0000)
+	NW = 32,   -- Северо-запад (0010 0000)
+	SE = 64,   -- Юго-восток (0100 0000)
+	SW = 128   -- Юго-запад (1000 0000)
+}
+local Level = {
+	main = {
+		tiles = {},
+		width,
+		height,
+		layer = "walls",
+		path = "#tilemap"
+	},
+	plan = {
+		tiles = {},
+		width,
+		height,
+		layer = "walls",
+		path = "#plan_tilemap",
+		delete_mark_tile = 71
+	}
+}
+
+local function tile_to_world(x, y)
+	local wrldx = TILE_SIZE * (x - 1) + TILE_SIZE / 2
+	local wrldy = TILE_SIZE * (y - 1) + TILE_SIZE / 2
+	return wrldx, wrldy
+end
+
+local function world_to_tile(x, y)
+	local coordx = math.ceil(x / TILE_SIZE)
+	local coordy = math.ceil(y / TILE_SIZE)
+	return coordx, coordy
+end
+
+local function screen_to_world(x, y, z, camera_id)
+	local DISPLAY_WIDTH = sys.get_config_int("display.width")
+	local DISPLAY_HEIGHT = sys.get_config_int("display.height")
+	local projection = camera.get_projection(camera_id)
+	local view = camera.get_view(camera_id)
+	local w, h = window.get_size()
+
+	w = w / (w / DISPLAY_WIDTH)
+	h = h / (h / DISPLAY_HEIGHT)
+
+	local inv = vmath.inv(projection * view)
+	x = (2 * x / w) - 1
+	y = (2 * y / h) - 1
+	z = (2 * z) - 1
+	local x1 = x * inv.m00 + y * inv.m01 + z * inv.m02 + inv.m03
+	local y1 = x * inv.m10 + y * inv.m11 + z * inv.m12 + inv.m13
+	local z1 = x * inv.m20 + y * inv.m21 + z * inv.m22 + inv.m23
+	return x1, y1, z1
+end
+
+local function is_out_of_bounds(x, y, width, height)
+	return x < 1 or x > width or y < 1 or y > height
+end
+
+local function find_mask(map, x, y)
+	local mask = 0
+	local xm, xp, ym, yp = x - 1, x + 1, y - 1, y + 1
+	local tiles = map.tiles
+
+	-- Проверяем границы
+	if is_out_of_bounds(x, y, map.width, map.height) then
+		return 0
+	end
+
+	-- Кэшируем строки с защитой
+	local row_curr = tiles[y] or {}
+	local row_prev = ym >= 1 and tiles[ym] or {}
+	local row_next = yp <= map.height and tiles[yp] or {}
+
+	-- Проверка ортогональных соседей
+	local has_N = yp <= map.height and row_next[x] and row_next[x] ~= 0
+	local has_E = xp <= map.width and row_curr[xp] and row_curr[xp] ~= 0
+	local has_S = ym >= 1 and row_prev[x] and row_prev[x] ~= 0
+	local has_W = xm >= 1 and row_curr[xm] and row_curr[xm] ~= 0
+
+	-- Устанавливаем биты направлений
+	if has_N then mask = mask + DIRECTION_MASKS.N end
+	if has_E then mask = mask + DIRECTION_MASKS.E end
+	if has_S then mask = mask + DIRECTION_MASKS.S end
+	if has_W then mask = mask + DIRECTION_MASKS.W end
+
+	-- Проверка диагоналей
+	if has_N and has_E and xp <= map.width and row_next[xp] and row_next[xp] ~= 0 then
+		mask = mask + DIRECTION_MASKS.NE
+	end
+	if has_S and has_E and xp <= map.width and row_prev[xp] and row_prev[xp] ~= 0 then
+		mask = mask + DIRECTION_MASKS.SE
+	end
+	if has_S and has_W and xm >= 1 and row_prev[xm] and row_prev[xm] ~= 0 then
+		mask = mask + DIRECTION_MASKS.SW
+	end
+	if has_N and has_W and xm >= 1 and row_next[xm] and row_next[xm] ~= 0 then
+		mask = mask + DIRECTION_MASKS.NW
+	end
+
+	return mask
+end
+
+local function set_autotile(map, x, y)
+	local mask = find_mask(map, x, y)
+	local tile_data = TILE_MAPPING[map.layer][mask]
+	if not tile_data then
+		print("Warning: No tile data for mask " .. tostring(mask) .. " at (" .. x .. ", " .. y .. ")")
+		return nil
+	end
+	if tilemap.set_tile(map.path, hash(map.layer), x, y, tile_data.tile_id, tile_data.transform_bitmask) then
+		return tile_data.tile_id
+	end
+	return nil
+end
+
+local function update_single_tile(map, x, y)
+	if is_out_of_bounds(x, y, map.width, map.height) then
+		return
+	end
+	local row = map.tiles[y]
+	if not row or row[x] == 0 then
+		return
+	end
+	map.tiles[y][x] = set_autotile(map, x, y) or 0
+end
+
+local function get_neighbors(x, y)
+	return {
+		{x, y-1},   -- север
+		{x+1, y-1}, -- северо-восток
+		{x+1, y},   -- восток
+		{x+1, y+1}, -- юго-восток
+		{x, y+1},   -- юг
+		{x-1, y+1}, -- юго-запад
+		{x-1, y},   -- запад
+		{x-1, y-1}  -- северо-запад
+	}
+end
+
+local function update_neighbors(map, x, y)
+	local start_time = os.clock()
+	local neighbors = get_neighbors(x, y)
+
+	for _, coord in ipairs(neighbors) do
+		update_single_tile(map, coord[1], coord[2])
+	end
+
+	local end_time = os.clock()
+	--print(end_time - start_time)
+end
+
+local function debug_compare_tiles(map)
+	-- Отладочный код: сравниваем map.tiles с tilemap.get_tiles
+	local DEBUG_MODE = true
+	if DEBUG_MODE then
+		-- Получаем реальную тайловую карту
+		local real_tiles = tilemap.get_tiles(map.path, hash(map.layer))
+
+		-- Проверяем, что размеры совпадают
+		if #real_tiles ~= #map.tiles then
+			print("Debug: Mismatch in tiles height! map.tiles height: " .. #map.tiles .. ", real_tiles height: " .. #real_tiles)
+		end
+
+		local mismatch_found = false
+		for y_idx = 1, #map.tiles do
+			if #real_tiles[y_idx] ~= #map.tiles[y_idx] then
+				print("Debug: Mismatch in row " .. y_idx .. " width! map.tiles width: " .. #map.tiles[y_idx] .. ", real_tiles width: " .. #real_tiles[y_idx])
+				mismatch_found = true
+				break
+			end
+
+			for x_idx = 1, #map.tiles[y_idx] do
+				-- Сравниваем значения тайлов
+				if map.tiles[y_idx][x_idx] ~= real_tiles[y_idx][x_idx] then
+					print("Debug: Mismatch at position (" .. x_idx .. ", " .. y_idx .. "): map.tiles = " .. tostring(map.tiles[y_idx][x_idx]) .. ", real_tiles = " .. tostring(real_tiles[y_idx][x_idx]))
+					mismatch_found = true
+				end
+			end
+		end
+
+		if not mismatch_found then
+			print("Debug: map.tiles matches tilemap.get_tiles")
+		end
+	end
+end
+
+local function new_tile(map, x, y)
+	local start_time = os.clock()
+
+	map.tiles[y][x] = set_autotile(map, x, y)
+	update_neighbors(map, x, y)
+
+	local end_time = os.clock()
+	--print(end_time - start_time)
+end
+
+local function remove_tile(map, x, y)
+	local start_time = os.clock()
+	if tilemap.set_tile(map.path, hash(map.layer), x, y, 0) then
+		map.tiles[y][x] = 0
+	end
+
+	local neighbors = get_neighbors(x, y)
+	for _, coord in ipairs(neighbors) do
+		update_single_tile(map, coord[1], coord[2])
+	end
+
+	local end_time = os.clock()
+	--print(end_time - start_time)
+end
+
+local function delete_region_without_update(plan_map, start_point, end_point)
+	-- Определяем границы прямоугольника
+	local start_y = math.min(start_point.y, end_point.y)
+	local end_y = math.max(start_point.y, end_point.y)
+	local start_x = math.min(start_point.x, end_point.x)
+	local end_x = math.max(start_point.x, end_point.x)
+
+	for y = start_y, end_y do
+		for x = start_x, end_x do
+			tilemap.set_tile(plan_map.path, hash(plan_map.layer), x, y, 0)
+			plan_map.tiles[y][x] = 0
+		end
+	end
+end
+
+local function delete_region_and_update(plan_map, ref_map, start_point, end_point)
+	-- Определяем границы прямоугольника
+	local start_y = math.min(start_point.y, end_point.y)
+	local end_y = math.max(start_point.y, end_point.y)
+	local start_x = math.min(start_point.x, end_point.x)
+	local end_x = math.max(start_point.x, end_point.x)
+
+	for y = start_y, end_y do
+		for x = start_x, end_x do
+			remove_tile(plan_map, x, y)
+		end
+	end
+end
+
+local function create_region(plan_map, ref_map, start_point, end_point)
+	-- Определяем границы прямоугольника
+	local start_time = os.clock()
+	local start_y = math.min(start_point.y, end_point.y)
+	local end_y = math.max(start_point.y, end_point.y)
+	local start_x = math.min(start_point.x, end_point.x)
+	local end_x = math.max(start_point.x, end_point.x)
+
+	-- 1. Добавляем тайлы внутри выделенной области
+	for y = start_y, end_y do
+		for x = start_x, end_x do
+			local plan_tile = plan_map.tiles[y][x]
+			local ref_tile = ref_map.tiles[y][x]
+			if plan_tile == 0 and ref_tile == 0 then 
+				new_tile(plan_map, x, y)
+			end
+		end
+	end
+
+	for y = math.max(1, start_y - 40), math.min(ref_map.height, end_y + 40) do
+		for x = math.max(1, start_x - 40), math.min(ref_map.width, end_x + 40) do
+			if plan_map.tiles[y][x] ~= 0 then
+				if x < start_x or x > end_x or y < start_y or y > end_y then
+					remove_tile(plan_map, x, y)
+				end
+			end
+		end
+	end
+	--print(os.clock() - start_time)
+end
+
+local function create_map_from_region(plan_map, ref_map, start_point, end_point)
+	local start_y = math.min(start_point.y, end_point.y)
+	local end_y = math.max(start_point.y, end_point.y)
+	local start_x = math.min(start_point.x, end_point.x)
+	local end_x = math.max(start_point.x, end_point.x)
+
+	for y = start_y, end_y do
+		for x = start_x, end_x do
+			local plan_tile = plan_map.tiles[y][x]
+			local ref_tile = ref_map.tiles[y][x]
+			if plan_tile ~= 0 and ref_tile == 0 then 
+				new_tile(ref_map, x, y)
+			end
+		end
+	end
+end
+
+local function create_region_above_ref_tiles(plan_map, ref_map, start_point, end_point)
+	-- Определяем границы прямоугольника
+	local start_time = os.clock()
+	local start_y = math.min(start_point.y, end_point.y)
+	local end_y = math.max(start_point.y, end_point.y)
+	local start_x = math.min(start_point.x, end_point.x)
+	local end_x = math.max(start_point.x, end_point.x)
+
+	-- 1. Добавляем тайлы внутри выделенной области
+	for y = start_y, end_y do
+		for x = start_x, end_x do
+			local plan_tile = plan_map.tiles[y][x]
+			local ref_tile = ref_map.tiles[y][x]
+			if plan_tile == 0 and ref_tile ~= 0 then
+				if tilemap.set_tile(plan_map.path, hash(plan_map.layer), x, y, plan_map.delete_mark_tile) then
+					plan_map.tiles[y][x] = plan_map.delete_mark_tile
+				end
+			end
+		end
+	end
+
+	for y = math.max(1, start_y - 40), math.min(ref_map.height, end_y + 40) do
+		for x = math.max(1, start_x - 40), math.min(ref_map.width, end_x + 40) do
+			if plan_map.tiles[y][x] ~= 0 then
+				if x < start_x or x > end_x or y < start_y or y > end_y then
+					if tilemap.set_tile(plan_map.path, hash(plan_map.layer), x, y, 0) then
+						plan_map.tiles[y][x] = 0
+					end
+				end
+			end
+		end
+	end
+
+	local end_time = os.clock()
+	--print(end_time - start_time)
+end
+
+function init(self)
+	_, _, Level.main.width, Level.main.height = tilemap.get_bounds(Level.main.path)
+	_, _, Level.plan.width, Level.plan.height = tilemap.get_bounds(Level.main.path)
+
+	Level.main.tiles = tilemap.get_tiles(Level.main.path, hash(Level.main.layer))
+	Level.plan.tiles = tilemap.get_tiles(Level.plan.path, hash(Level.plan.layer))
+
+	msg.post(".", "acquire_input_focus")
+
+	go.set_position(vmath.vector3((Level.main.width * TILE_SIZE) / 2, (Level.main.height * TILE_SIZE) / 2, 0), "/camera")
+	go.set("#plan_tilemap", "tint", vmath.vector4(1, 1, 1, 0.5))
+
+	for y = 1, Level.main.height do
+		for x = 1, Level.main.width do
+			if Level.main.tiles[y][x] ~= 0 then
+				Level.main.tiles[y][x] = set_autotile(Level.main, x, y)
+			end
+		end
+	end
+end
+
+function math.clamp(n, low, high) return math.min(math.max(n, low), high) end
+
+function on_input(self, action_id, action)
+	if action.x == 0 and action.y == 0 then
+		return
+	end
+
+	local worldx, worldy = screen_to_world(action.x, action.y, 0, "/camera#camera")
+	local tile_x, tile_y = world_to_tile(worldx, worldy)
+
+	-- Корректируем координаты, чтобы оставались в пределах карты
+	tile_x = math.clamp(tile_x, 1, Level.main.width)
+	tile_y = math.clamp(tile_y, 1, Level.main.height)
+
+	local x, y = tile_to_world(tile_x, tile_y)
+	go.set_position(vmath.vector3(x, y, 1), "/target_cell")
+
+	-- Проверяем, изменилась ли клетка
+	local tile_changed = tile_x ~= drag_state.last_tile.x or tile_y ~= drag_state.last_tile.y
+
+	if drag_state.is_drag and tile_changed then
+		if drag_state.to_delete == false then
+			--local width = math.abs(tile_x - drag_state.start.x) + 1
+			--local height = math.abs(tile_y - drag_state.start.y) + 1
+			--local area = width * height
+
+			--print("Размер области:", width, "x", height, "=", area, "тайлов")
+			create_region(Level.plan, Level.main, drag_state.start, {x = tile_x, y = tile_y })
+		else
+			create_region_above_ref_tiles(Level.plan, Level.main, drag_state.start, {x = tile_x, y = tile_y })
+		end
+	end
+
+	drag_state.last_tile.x = tile_x
+	drag_state.last_tile.y = tile_y
+
+	if action_id == hash("btn_left") and action.pressed then
+		if drag_state.is_drag then
+			return
+		end
+
+		drag_state.start.x, drag_state.start.y = tile_x, tile_y
+
+		if drag_state.start.x == drag_state.last_tile.x and drag_state.start.y == drag_state.last_tile.y then
+			create_region(Level.plan, Level.main, drag_state.start, drag_state.start)
+		end
+
+		drag_state.is_drag = true
+		drag_state.to_delete = false
+		drag_state.start.x, drag_state.start.y = tile_x, tile_y
+	end
+	if action_id == hash("btn_left") and action.released then
+		if not drag_state.is_drag then
+			return
+		end
+
+		drag_state.is_drag = false
+
+		-- Если клетка не изменилась (одиночный клик), создаём тайл в начальной точке
+		if drag_state.start.x == drag_state.last_tile.x and drag_state.start.y == drag_state.last_tile.y then
+			create_map_from_region(Level.plan, Level.main, drag_state.start, drag_state.start)
+			delete_region_without_update(Level.plan, drag_state.start, drag_state.start)
+		else
+			-- Обычная обработка для перетаскивания
+			create_map_from_region(Level.plan, Level.main, drag_state.start, drag_state.last_tile)
+			delete_region_without_update(Level.plan, drag_state.start, drag_state.last_tile)
+		end
+	end
+	if action_id == hash("btn_right") and action.pressed then
+		if drag_state.is_drag then
+			return
+		end
+
+		drag_state.start.x, drag_state.start.y = tile_x, tile_y
+
+		create_region_above_ref_tiles(Level.plan, Level.main, drag_state.start, drag_state.start)
+
+		drag_state.is_drag = true
+		drag_state.to_delete = true
+	end
+	if action_id == hash("btn_right") and action.released then
+		if not drag_state.is_drag then
+			return
+		end
+
+		drag_state.is_drag = false
+		delete_region_and_update(Level.main, Level.plan, drag_state.start, drag_state.last_tile)
+		delete_region_without_update(Level.plan, drag_state.start, drag_state.last_tile)
+	end
+	--debug_compare_tiles(Level.main)
+end
