@@ -1,0 +1,14 @@
+local BASE_WIDTH = 960
+local BASE_HEIGHT = 640
+local ZOOM_LEVEL = 2
+
+local function update_camera()
+	local window_w, window_h = window.get_size()
+	local scale = math.min(window_w/BASE_WIDTH, window_h/BASE_HEIGHT)
+
+	go.set("/camera#camera", "orthographic_zoom", ZOOM_LEVEL/scale)
+end
+
+function init(self)
+	msg.post("@render:", "use_fixed_projection", { zoom = 4 })
+end

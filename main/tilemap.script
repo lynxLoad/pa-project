@@ -70,23 +70,37 @@ local DIRECTION_MASKS = {
 	SE = 64,   -- Юго-восток (0100 0000)
 	SW = 128   -- Юго-запад (1000 0000)
 }
+local layers = {
+	GROUND = "ground",
+	WALLS = "walls"
+}
+local curr_layer = layers.WALLS
+local curr_floor = 1
 local Level = {
 	main = {
-		tiles = {},
+		tiles = {}, -- можно хранить этажи в тайлах [1] = {[y] = {[x] = {tile_id}}}, [2] etc. path получает названия "#floor1", "#floor2" etc
 		width,
 		height,
-		layer = "walls",
-		path = "#tilemap"
+		layer = curr_layer,
+		path
 	},
 	plan = {
 		tiles = {},
 		width,
 		height,
-		layer = "walls",
+		layer = curr_layer,
 		path = "#plan_tilemap",
 		delete_mark_tile = 71
 	}
 }
+
+setmetatable(Level.main, {
+	__index = function(table, key)
+		if key == "path" then
+			return "#floor" .. curr_floor
+		end
+	end
+})
 
 local function tile_to_world(x, y)
 	local wrldx = TILE_SIZE * (x - 1) + TILE_SIZE / 2
@@ -129,12 +143,10 @@ local function find_mask(map, x, y)
 	local xm, xp, ym, yp = x - 1, x + 1, y - 1, y + 1
 	local tiles = map.tiles
 
-	-- Проверяем границы
 	if is_out_of_bounds(x, y, map.width, map.height) then
 		return 0
 	end
-
-	-- Кэшируем строки с защитой
+	
 	local row_curr = tiles[y] or {}
 	local row_prev = ym >= 1 and tiles[ym] or {}
 	local row_next = yp <= map.height and tiles[yp] or {}
@@ -329,7 +341,6 @@ local function create_region(plan_map, ref_map, start_point, end_point)
 			end
 		end
 	end
-	--print(os.clock() - start_time)
 end
 
 local function create_map_from_region(plan_map, ref_map, start_point, end_point)
@@ -386,7 +397,8 @@ function init(self)
 
 	msg.post(".", "acquire_input_focus")
 
-	go.set_position(vmath.vector3((Level.main.width * TILE_SIZE) / 2, (Level.main.height * TILE_SIZE) / 2, 0), "/camera")
+	go.set_position(vmath.vector3((Level.main.width * TILE_SIZE) / 2, (Level.main.height * TILE_SIZE) / 2, 0), "/camera#camera")
+	--render.set_projection(vmath.matrix4_orthographic(0, render.get_width(), 0, render.get_height(), -1, 1))
 	go.set("#plan_tilemap", "tint", vmath.vector4(1, 1, 1, 0.5))
 
 	for y = 1, Level.main.height do
@@ -398,7 +410,7 @@ function init(self)
 	end
 end
 
-function math.clamp(n, low, high) return math.min(math.max(n, low), high) end
+function math.clamp(n, min, max) return math.min(math.max(n, min), max) end
 
 function on_input(self, action_id, action)
 	if action.x == 0 and action.y == 0 then
