@@ -1,14 +1,16 @@
-local BASE_WIDTH = 960
-local BASE_HEIGHT = 640
-local ZOOM_LEVEL = 2
+local BASE_WIDTH = sys.get_config_int("display.width")
+local BASE_HEIGHT = sys.get_config_int("display.height")
+local ZOOM
 
-local function update_camera()
-	local window_w, window_h = window.get_size()
-	local scale = math.min(window_w/BASE_WIDTH, window_h/BASE_HEIGHT)
+local game_events = require("management.game_events")
 
-	go.set("/camera#camera", "orthographic_zoom", ZOOM_LEVEL/scale)
+local function update_camera(width, height)
+	local scale = math.min(width / BASE_WIDTH, height / BASE_HEIGHT)
+	go.set("#camera", "orthographic_zoom", ZOOM * scale)
 end
 
 function init(self)
-	msg.post("@render:", "use_fixed_projection", { zoom = 4 })
+	ZOOM = camera.get_orthographic_zoom("#camera")
+
+	game_events.window_resized:subscribe(update_camera, width, height)
 end

@@ -27,6 +27,8 @@ local DEFAULT_NEAR = -1
 local DEFAULT_FAR =   1
 local DEFAULT_ZOOM =  1
 
+local game_events = require("management.game_events")
+
 --
 -- projection that centers content with maintained aspect ratio and optional zoom
 --
@@ -256,7 +258,7 @@ function on_message(self, message_id, message)
 		update_clear_color(state, message.color)
 	elseif message_id == MSG_WINDOW_RESIZED then
 		update_state(state)
-		print(camera.zoom)
+		game_events.window_resized:trigger(message.width, message.height)
 	elseif message_id == MSG_SET_VIEW_PROJ then
 		camera.view = message.view
 		self.camera_projection = message.projection or vmath.matrix4()
