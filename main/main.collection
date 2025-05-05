@@ -55,3 +55,11 @@ embedded_instances {
     z: 1.0
   }
 }
+embedded_instances {
+  id: "hud"
+  data: "components {\n"
+  "  id: \"hud\"\n"
+  "  component: \"/ui/main.gui\"\n"
+  "}\n"
+  ""
+}

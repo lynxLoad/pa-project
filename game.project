@@ -19,6 +19,7 @@ scale_mode = stretch
 [project]
 title = Empty project
 dependencies#0 = https://github.com/Insality/defold-event/archive/refs/tags/11.zip
+dependencies#1 = https://github.com/Insality/druid/archive/refs/tags/1.1.0.zip
 
 [graphics]
 default_texture_min_filter = nearest
@@ -29,4 +30,7 @@ max_count = 1024
 
 [tilemap]
 max_tile_count = 100048
+
+[input]
+game_binding = /builtins/input/all.input_bindingc
 
