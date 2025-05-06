@@ -1,9 +1,16 @@
 local druid = require("druid.druid")
-local Widget = require("ui.widget")
+local Button = require("ui.elements.button")
+
+local function on_mouse_hover(widget)
+	local is_hover = widget.hover:is_mouse_hovered()
+
+	--gui.set(gui.get_node("btn"), "color", vmath.vector4(1, 0, 0, 1))
+end
 
 function init(self)
 	self.druid = druid.new(self)
-	self.widget = self.druid:new_widget(Widget, nil)
+	self.button = self.druid:new_widget(Button, nil)
+	self.button.hover.on_mouse_hover:subscribe(on_mouse_hover, self.button)
 end
 
 function final(self)
