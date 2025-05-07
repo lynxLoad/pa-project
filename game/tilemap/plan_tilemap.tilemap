@@ -1,4 +1,4 @@
-tile_set: "/main/tilesource.tilesource"
+tile_set: "/game/tilemap/tilesource.tilesource"
 layers {
   id: "border"
   z: 0.0

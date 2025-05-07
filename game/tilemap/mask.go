@@ -1,6 +1,6 @@
 components {
   id: "mask"
-  component: "/main/mask.script"
+  component: "/game/tilemap/mask.script"
 }
 embedded_components {
   id: "label"
