@@ -1,28 +1,28 @@
-local BASE_WIDTH = sys.get_config_int("display.width")
-local BASE_HEIGHT = sys.get_config_int("display.height")
-
--- Базовые значения зума (для исходного размера окна)
-local BASE_MAX_ZOOM = 10
-local BASE_MIN_ZOOM = 2
-local BASE_ZOOM
-
-local is_drag = false
 
 local game_events = require("management.game_events")
 local global = require("management.global")
 
+local BASE_WIDTH = sys.get_config_int("display.width")
+local BASE_HEIGHT = sys.get_config_int("display.height")
+
+local ZOOM_FACTOR = 1.1
+local BASE_MAX_ZOOM = 10
+local BASE_MIN_ZOOM = 2
+local zoom
+
+local camera_path = "#camera"
+
 local function update_camera(width, height)
 	local scale = math.min(width / BASE_WIDTH, height / BASE_HEIGHT)
-	-- Вычисляем актуальные MIN/MAX с учетом масштаба
 	local current_min_zoom = BASE_MIN_ZOOM * scale
 	local current_max_zoom = BASE_MAX_ZOOM * scale
-
-	go.set("#camera", "orthographic_zoom", math.clamp(BASE_ZOOM * scale, current_min_zoom, current_max_zoom))
+	zoom = math.clamp(zoom, BASE_MIN_ZOOM, BASE_MAX_ZOOM)
+	go.set(camera_path, "orthographic_zoom", zoom * scale)
 end
 
 function init(self)
 	global.screen_to_world(1, 1, 1, camera.get_projection("#camera"), camera.get_view("#camera"))
-	BASE_ZOOM = camera.get_orthographic_zoom("#camera")
+	zoom = camera.get_orthographic_zoom(camera_path)
 	msg.post(".", "acquire_input_focus")
 	game_events.window_resized:subscribe(update_camera)
 end
@@ -38,37 +38,28 @@ function on_input(self, action_id, action)
 	
 	if drag_input and action.pressed then
 		self.start_cam_pos = go.get_position(go.get_id("/camera"))
-		self.start_mouse_pos = vmath.vector3(
-			action.x, 
-			action.y, 
-			0
-		)
+		self.start_mouse_pos = vmath.vector3(action.x, action.y, 0)
 		
-		is_drag = true
+		self.is_drag_cam = true
 	end
 
-	if is_drag then
-		local current_mouse_pos = vmath.vector3(
-			action.x, 
-			action.y, 
-			0
-		)
+	if self.is_drag_cam then
+		local current_mouse_pos = vmath.vector3(action.x, action.y, 0)
 
-		-- Преобразуем обе точки (начальную и текущую) в мировые координаты
 		local start_world = global.screen_to_world(
 			self.start_mouse_pos.x, 
 			self.start_mouse_pos.y, 
 			0,
-			camera.get_projection("#camera"),
-			camera.get_view("#camera")
+			camera.get_projection(camera_path),
+			camera.get_view(camera_path)
 		)
 
 		local current_world = global.screen_to_world(
 			current_mouse_pos.x, 
 			current_mouse_pos.y, 
 			0, 
-			camera.get_projection("#camera"), 
-			camera.get_view("#camera")
+			camera.get_projection(camera_path), 
+			camera.get_view(camera_path)
 		)
 
 		local delta = current_world - start_world
@@ -77,35 +68,24 @@ function on_input(self, action_id, action)
 	end
 
 	if drag_input and action.released then
-		is_drag = false
+		self.is_drag_cam = false
 	end
 	
 	if mouse_wheel_up or mouse_wheel_down then
-		BASE_ZOOM = camera.get_orthographic_zoom("#camera")
-		local ZOOM_FACTOR = 1.5
-		local next_zoom
+		local next_zoom = zoom
 		if mouse_wheel_up then
-			next_zoom = BASE_ZOOM * ZOOM_FACTOR
+			next_zoom = next_zoom * ZOOM_FACTOR
+		elseif mouse_wheel_down then
+			next_zoom = next_zoom / ZOOM_FACTOR
 		end
-		if mouse_wheel_down then
-			next_zoom = BASE_ZOOM / ZOOM_FACTOR
-		end
-		
-		-- Получаем текущий размер окна
+
 		local width, height = window.get_size()
 		local scale = math.min(width / BASE_WIDTH, height / BASE_HEIGHT)
-		-- Вычисляем актуальные MIN/MAX для проверки
 		local current_min_zoom = BASE_MIN_ZOOM * scale
 		local current_max_zoom = BASE_MAX_ZOOM * scale
+		next_zoom = math.clamp(next_zoom, BASE_MIN_ZOOM, BASE_MAX_ZOOM)
 
-		next_zoom = math.clamp(next_zoom, current_min_zoom, current_max_zoom)
-		go.animate(
-			"#camera",                     -- Идентификатор объекта камеры
-			"orthographic_zoom",          -- Свойство для анимации
-			go.PLAYBACK_ONCE_FORWARD,     -- Тип анимации (однократная)
-			next_zoom,                  -- Конечное значение
-			go.EASING_OUTQUAD,            -- Функция плавности (можно выбрать другую)
-			0.2                          -- Длительность анимации (сек)
-		)
+		go.animate(camera_path, "orthographic_zoom", go.PLAYBACK_ONCE_FORWARD, next_zoom * scale, go.EASING_OUTQUAD, 0.05)
+		zoom = next_zoom
 	end
 end
