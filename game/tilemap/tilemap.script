@@ -430,6 +430,8 @@ function init(self)
 	Level.main.tiles = tilemap.get_tiles(Level.main.path, hash(Level.main.layer))
 	Level.plan.tiles = tilemap.get_tiles(Level.plan.path, hash(Level.plan.layer))
 
+	game_events.map_initialized:trigger(Level.main.width * TILE_SIZE, Level.main.height * TILE_SIZE)
+
 	msg.post(".", "acquire_input_focus")
 
 	go.set_position(vmath.vector3((Level.main.width * TILE_SIZE) / 2, (Level.main.height * TILE_SIZE) / 2, 0), "/camera#camera")

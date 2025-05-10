@@ -8,81 +8,136 @@ local BASE_HEIGHT = sys.get_config_int("display.height")
 local ZOOM_FACTOR = 1.1
 local BASE_MAX_ZOOM = 10
 local BASE_MIN_ZOOM = 2
-local zoom
+local CAM_SPEED = 1.5
+
+local map_width = 0
+local map_height = 0
 
 local camera_path = "#camera"
 
-
 local function update_camera(self, width, height)
-	local scale = math.min(width / BASE_WIDTH, height / BASE_HEIGHT)
-	go.set(camera_path, "orthographic_zoom", zoom * scale)
+	self.scale = math.min(width / BASE_WIDTH, height / BASE_HEIGHT)
+	go.set(camera_path, "orthographic_zoom", self.zoom * self.scale)
 	self.proj = camera.get_projection(camera_path)
 	self.view = camera.get_view(camera_path)
+end
+
+local function zoom_in(self)
+	self.zoom = self.zoom * ZOOM_FACTOR
+
+	self.zoom = math.clamp(self.zoom, BASE_MIN_ZOOM, BASE_MAX_ZOOM)
+
+	local width, height = window.get_size()
+	self.scale = math.min(width / BASE_WIDTH, height / BASE_HEIGHT)
+
+	go.animate(camera_path, "orthographic_zoom", go.PLAYBACK_ONCE_FORWARD, self.zoom * self.scale, go.EASING_OUTQUAD, 0.15)
+end
+
+local function zoom_out(self)
+	self.zoom = self.zoom / ZOOM_FACTOR
+
+	self.zoom = math.clamp(self.zoom, BASE_MIN_ZOOM, BASE_MAX_ZOOM)
+
+	local width, height = window.get_size()
+	self.scale = math.min(width / BASE_WIDTH, height / BASE_HEIGHT)
+
+	go.animate(camera_path, "orthographic_zoom", go.PLAYBACK_ONCE_FORWARD, self.zoom * self.scale, go.EASING_OUTQUAD, 0.15)
 end
 
 function init(self)
-	zoom = camera.get_orthographic_zoom(camera_path)
 	msg.post(".", "acquire_input_focus")
-	game_events.window_resized:subscribe(update_camera, self)	
+	
+	self.zoom = camera.get_orthographic_zoom(camera_path)
+	
+	game_events.window_resized:subscribe(update_camera, self)
+	game_events.map_initialized:subscribe(function(m_width, m_height) map_width, map_height = m_width, m_height end)
+	update_camera(self, BASE_WIDTH, BASE_HEIGHT)
 
 	self.proj = camera.get_projection(camera_path)
 	self.view = camera.get_view(camera_path)
 end
 
-function on_input(self, action_id, action)
-	local mouse_wheel_up = action_id == hash("mouse_wheel_up")
-	local mouse_wheel_down = action_id == hash("mouse_wheel_down")
-	local drag_input = action_id == hash("mouse_button_middle") or action_id == hash("key_lctrl")
+function final(self)
+	game_events.window_resized:unsubscribe(update_camera, self)
+end
 
+function on_input(self, action_id, action)
+	local zoom_in_input = action_id == hash("mouse_wheel_up") or action_id == hash("key_pageup") and action.pressed
+	local zoom_out_input = action_id == hash("mouse_wheel_down") or action_id == hash("key_pagedown") and action.pressed
+	local drag_input = action_id == hash("mouse_button_middle") or action_id == hash("key_lctrl")
+	local key_up = action_id == hash("key_up")
+	local key_down = action_id == hash("key_down")
+	local key_right = action_id == hash("key_right")
+	local key_left = action_id == hash("key_left")
+	
 	if drag_input and action.pressed then
 		self.start_cam_pos = go.get_position(go.get_id("/camera"))
 		self.start_mouse_pos = vmath.vector3(action.x, action.y, 0)
+
+		self.proj = camera.get_projection(camera_path)
+		self.view = camera.get_view(camera_path)
 
 		self.is_drag_cam = true
 	end
 
 	if self.is_drag_cam then
 		local current_mouse_pos = vmath.vector3(action.x, action.y, 0)
-			self.proj = camera.get_projection(camera_path)
-			self.view = camera.get_view(camera_path)
 
 		local start_world = global.screen_to_world(
 			self.start_mouse_pos.x, 
 			self.start_mouse_pos.y, 
 			0,
 			self.proj,
-			self.view
-		)
+			self.view)
 
 		local current_world = global.screen_to_world(
 			current_mouse_pos.x, 
 			current_mouse_pos.y, 
 			0, 
 			self.proj,
-			self.view
-		)
+			self.view)
 
-	local delta = current_world - start_world
-	local new_pos = self.start_cam_pos - delta 
-	go.set_position(new_pos, go.get_id("/camera"))
+		local delta = current_world - start_world
+		local new_pos = self.start_cam_pos - delta
+
+		-- Ограничиваем позицию камеры
+		new_pos.x = math.clamp(new_pos.x, 1, map_width)
+		new_pos.y = math.clamp(new_pos.y, 1, map_height)
+
+		-- Если камера достигла границы, обновляем начальные позиции
+		if new_pos.x == 1 or new_pos.x == map_width or new_pos.y == 1 or new_pos.y == map_height then
+			self.start_mouse_pos = current_mouse_pos
+			self.start_cam_pos = new_pos
+		end
+
+		go.animate("/camera", "position", go.PLAYBACK_ONCE_FORWARD, new_pos, go.EASING_OUTQUAD, 0.02)
 	end
 
 	if drag_input and action.released then
 		self.is_drag_cam = false
 	end
 
-	if mouse_wheel_up or mouse_wheel_down then
-		if mouse_wheel_up then
-			zoom = zoom * ZOOM_FACTOR
-		elseif mouse_wheel_down then
-			zoom = zoom / ZOOM_FACTOR
-		end
+	if key_up or key_down or key_right or key_left then
+		local speed = CAM_SPEED / (self.zoom * self.scale)
+		local direction = vmath.vector3(0, 0, 0)
+	
+		if key_up then direction.y = 1 end
+		if key_down then direction.y = -1 end
+		if key_right then direction.x = 1 end
+		if key_left then direction.x = -1 end
 
-		zoom = math.clamp(zoom, BASE_MIN_ZOOM, BASE_MAX_ZOOM)
+		local new_pos = go.get_position() + direction * speed
 
-		local width, height = window.get_size()
-		local scale = math.min(width / BASE_WIDTH, height / BASE_HEIGHT)
+		new_pos.x = math.clamp(new_pos.x, 1, map_width)
+		new_pos.y = math.clamp(new_pos.y, 1, map_height)
 
-		go.set(camera_path, "orthographic_zoom", zoom * scale)
+		-- нормализация не нужна (движение "ступенькой")
+		go.set_position(new_pos)
+	end
+	
+	if zoom_in_input then
+		zoom_in(self)
+	elseif zoom_out_input then
+		zoom_out(self)
 	end
 end
