@@ -1,6 +1,5 @@
 
 local game_events = require("management.game_events")
-local global = require("management.global")
 
 local BASE_WIDTH = sys.get_config_int("display.width")
 local BASE_HEIGHT = sys.get_config_int("display.height")
@@ -8,7 +7,7 @@ local BASE_HEIGHT = sys.get_config_int("display.height")
 local ZOOM_FACTOR = 1.1
 local BASE_MAX_ZOOM = 10
 local BASE_MIN_ZOOM = 2
-local CAM_SPEED = 1.5
+local CAM_SPEED = 2.5
 
 local map_width = 0
 local map_height = 0
@@ -50,11 +49,16 @@ function init(self)
 	self.zoom = camera.get_orthographic_zoom(camera_path)
 	
 	game_events.window_resized:subscribe(update_camera, self)
-	game_events.map_initialized:subscribe(function(m_width, m_height) map_width, map_height = m_width, m_height end)
 	update_camera(self, BASE_WIDTH, BASE_HEIGHT)
 
 	self.proj = camera.get_projection(camera_path)
 	self.view = camera.get_view(camera_path)
+end
+
+function on_message(self, message_id, message)
+	if message_id == hash("map_initialized") then
+		map_width, map_height = message.mw, message.mh
+	end
 end
 
 function final(self)
@@ -83,14 +87,14 @@ function on_input(self, action_id, action)
 	if self.is_drag_cam then
 		local current_mouse_pos = vmath.vector3(action.x, action.y, 0)
 
-		local start_world = global.screen_to_world(
+		local start_world = vmath.screen_to_world(
 			self.start_mouse_pos.x, 
 			self.start_mouse_pos.y, 
 			0,
 			self.proj,
 			self.view)
 
-		local current_world = global.screen_to_world(
+		local current_world = vmath.screen_to_world(
 			current_mouse_pos.x, 
 			current_mouse_pos.y, 
 			0, 

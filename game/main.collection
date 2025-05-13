@@ -1,4 +1,8 @@
 name: "main"
+instances {
+  id: "camera"
+  prototype: "/game/camera/camera.go"
+}
 scale_along_z: 0
 embedded_instances {
   id: "tilemap"
@@ -18,18 +22,6 @@ embedded_instances {
   "components {\n"
   "  id: \"plan_tilemap\"\n"
   "  component: \"/game/tilemap/plan_tilemap.tilemap\"\n"
-  "}\n"
-  ""
-}
-embedded_instances {
-  id: "camera"
-  data: "components {\n"
-  "  id: \"camera\"\n"
-  "  component: \"/game/camera/camera.camera\"\n"
-  "}\n"
-  "components {\n"
-  "  id: \"camera2\"\n"
-  "  component: \"/game/camera/camera.script\"\n"
   "}\n"
   ""
 }
