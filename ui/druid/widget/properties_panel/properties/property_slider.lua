@@ -1,5 +1,5 @@
 local event = require("event.event")
-local helper = require("druid.helper")
+local helper = require("ui.druid.helper")
 
 ---@class druid.widget.property_slider: druid.widget
 ---@field root node

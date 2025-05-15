@@ -1,7 +1,7 @@
 --- Defold Text Proto format encoder/decoder to lua table
 
-local config = require("druid.editor_scripts.defold_parser.system.config")
-local system = require("druid.editor_scripts.defold_parser.system.system")
+local config = require("ui.druid.editor_scripts.defold_parser.system.config")
+local system = require("ui.druid.editor_scripts.defold_parser.system.system")
 
 local M = {}
 

@@ -1,4 +1,4 @@
-local color = require("druid.color")
+local color = require("ui.druid.color")
 
 ---@class druid.widget.property_button: druid.widget
 ---@field root node

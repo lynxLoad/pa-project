@@ -1,4 +1,4 @@
-local parser = require("druid.editor_scripts.defold_parser.system.parser")
+local parser = require("ui.druid.editor_scripts.defold_parser.system.parser")
 
 local M = {}
 

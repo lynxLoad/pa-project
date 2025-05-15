@@ -1,4 +1,4 @@
-local config = require("druid.editor_scripts.defold_parser.system.config")
+local config = require("ui.druid.editor_scripts.defold_parser.system.config")
 
 local M = {}
 

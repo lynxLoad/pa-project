@@ -1,6 +1,6 @@
-image: "/assets/sprites/tilemap.png"
-tile_width: 8
-tile_height: 8
+image: "/assets/sprites/tilemap_big.png"
+tile_width: 16
+tile_height: 16
 collision_groups: "default"
 animations {
   id: "anim"

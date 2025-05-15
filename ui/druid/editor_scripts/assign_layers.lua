@@ -1,7 +1,7 @@
 --- Module for assigning layers to GUI nodes based on textures and fonts
 
-local defold_parser = require("druid.editor_scripts.defold_parser.defold_parser")
-local system = require("druid.editor_scripts.defold_parser.system.system")
+local defold_parser = require("ui.druid.editor_scripts.defold_parser.defold_parser")
+local system = require("ui.druid.editor_scripts.defold_parser.system.system")
 
 local M = {}
 

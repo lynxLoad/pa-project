@@ -1,10 +1,10 @@
-local property_checkbox = require("druid.widget.properties_panel.properties.property_checkbox")
-local property_slider = require("druid.widget.properties_panel.properties.property_slider")
-local property_button = require("druid.widget.properties_panel.properties.property_button")
-local property_input = require("druid.widget.properties_panel.properties.property_input")
-local property_text = require("druid.widget.properties_panel.properties.property_text")
-local property_left_right_selector = require("druid.widget.properties_panel.properties.property_left_right_selector")
-local property_vector3 = require("druid.widget.properties_panel.properties.property_vector3")
+local property_checkbox = require("ui.druid.widget.properties_panel.properties.property_checkbox")
+local property_slider = require("ui.druid.widget.properties_panel.properties.property_slider")
+local property_button = require("ui.druid.widget.properties_panel.properties.property_button")
+local property_input = require("ui.druid.widget.properties_panel.properties.property_input")
+local property_text = require("ui.druid.widget.properties_panel.properties.property_text")
+local property_left_right_selector = require("ui.druid.widget.properties_panel.properties.property_left_right_selector")
+local property_vector3 = require("ui.druid.widget.properties_panel.properties.property_vector3")
 
 ---@class druid.widget.properties_panel: druid.widget
 ---@field root node

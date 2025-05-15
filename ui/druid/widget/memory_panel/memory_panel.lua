@@ -1,5 +1,5 @@
-local helper = require("druid.helper")
-local mini_graph = require("druid.widget.mini_graph.mini_graph")
+local helper = require("ui.druid.helper")
+local mini_graph = require("ui.druid.widget.mini_graph.mini_graph")
 
 ---@class druid.widget.memory_panel: druid.widget
 ---@field root node

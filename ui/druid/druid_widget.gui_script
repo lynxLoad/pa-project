@@ -5,7 +5,7 @@
 --- And now all top level functions from the widget will be available in the GO script
 --- Use with caution, this is a new feature, but allow utilize flexability of `event` module
 
-local druid = require("druid.druid")
+local druid = require("ui.druid.druid")
 
 function init(self)
 	self.druid = druid.new(self)

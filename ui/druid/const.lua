@@ -1,21 +1,21 @@
 ---@class druid.system.const
 local M = {}
 
-M.ACTION_TEXT = hash(sys.get_config_string("druid.input_text", "text"))
-M.ACTION_TOUCH = hash(sys.get_config_string("druid.input_touch", "touch"))
-M.ACTION_MARKED_TEXT = hash(sys.get_config_string("druid.input_marked_text", "marked_text"))
-M.ACTION_ESC = hash(sys.get_config_string("druid.input_key_esc", "key_esc"))
-M.ACTION_BACK = hash(sys.get_config_string("druid.input_key_back", "key_back"))
-M.ACTION_ENTER = hash(sys.get_config_string("druid.input_key_enter", "key_enter"))
-M.ACTION_MULTITOUCH = hash(sys.get_config_string("druid.input_multitouch", "touch_multi"))
-M.ACTION_BACKSPACE = hash(sys.get_config_string("druid.input_key_backspace", "key_backspace"))
-M.ACTION_SCROLL_UP = hash(sys.get_config_string("druid.input_scroll_up", "mouse_wheel_up"))
-M.ACTION_SCROLL_DOWN = hash(sys.get_config_string("druid.input_scroll_down", "mouse_wheel_down"))
-M.ACTION_LEFT = hash(sys.get_config_string("druid.input_key_left", "key_left"))
-M.ACTION_RIGHT = hash(sys.get_config_string("druid.input_key_right", "key_right"))
-M.ACTION_LSHIFT = hash(sys.get_config_string("druid.input_key_lshift", "key_lshift"))
-M.ACTION_LCTRL = hash(sys.get_config_string("druid.input_key_lctrl", "key_lctrl"))
-M.ACTION_LCMD = hash(sys.get_config_string("druid.input_key_lsuper", "key_lsuper"))
+M.ACTION_TEXT = hash(sys.get_config_string("ui.druid.input_text", "text"))
+M.ACTION_TOUCH = hash(sys.get_config_string("ui.druid.input_touch", "touch"))
+M.ACTION_MARKED_TEXT = hash(sys.get_config_string("ui.druid.input_marked_text", "marked_text"))
+M.ACTION_ESC = hash(sys.get_config_string("ui.druid.input_key_esc", "key_esc"))
+M.ACTION_BACK = hash(sys.get_config_string("ui.druid.input_key_back", "key_back"))
+M.ACTION_ENTER = hash(sys.get_config_string("ui.druid.input_key_enter", "key_enter"))
+M.ACTION_MULTITOUCH = hash(sys.get_config_string("ui.druid.input_multitouch", "touch_multi"))
+M.ACTION_BACKSPACE = hash(sys.get_config_string("ui.druid.input_key_backspace", "key_backspace"))
+M.ACTION_SCROLL_UP = hash(sys.get_config_string("ui.druid.input_scroll_up", "mouse_wheel_up"))
+M.ACTION_SCROLL_DOWN = hash(sys.get_config_string("ui.druid.input_scroll_down", "mouse_wheel_down"))
+M.ACTION_LEFT = hash(sys.get_config_string("ui.druid.input_key_left", "key_left"))
+M.ACTION_RIGHT = hash(sys.get_config_string("ui.druid.input_key_right", "key_right"))
+M.ACTION_LSHIFT = hash(sys.get_config_string("ui.druid.input_key_lshift", "key_lshift"))
+M.ACTION_LCTRL = hash(sys.get_config_string("ui.druid.input_key_lctrl", "key_lctrl"))
+M.ACTION_LCMD = hash(sys.get_config_string("ui.druid.input_key_lsuper", "key_lsuper"))
 
 M.ON_INPUT = "on_input"
 M.ON_UPDATE = "update"

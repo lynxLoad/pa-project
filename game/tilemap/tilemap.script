@@ -61,7 +61,7 @@ local drag_state = {
 	last_tile = {x = 0, y = 0}
 }
 
-local TILE_SIZE = 8
+local TILE_SIZE = 16
 local DIRECTION_MASKS = {
 	N  = 1,    -- Север (0001)
 	E  = 2,    -- Восток (0010)

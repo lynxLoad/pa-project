@@ -1,5 +1,5 @@
-local color = require("druid.color")
-local helper = require("druid.helper")
+local color = require("ui.druid.color")
+local helper = require("ui.druid.helper")
 
 ---Widget to display a several lines with different height in a row
 ---Init, set amount of samples and max value of value means that the line will be at max height
