@@ -25,7 +25,7 @@ function M:on_hover_callback()
 end
 
 function M:on_mouse_hover_callback()
-	game_events.is_ui_mouse_hovered = self.hover:is_mouse_hovered()
+	--game_events.is_ui_mouse_hovered = self.hover:is_mouse_hovered()
 end
 
 return M

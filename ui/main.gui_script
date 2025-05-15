@@ -1,4 +1,4 @@
-local druid = require("druid.druid")
+local druid = require("ui.druid.druid")
 local Button = require("ui.elements.button")
 
 local function on_mouse_hover(widget)
