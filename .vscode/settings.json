@@ -12,7 +12,8 @@
     "Lua.diagnostics.libraryFiles": "Disable",
     "Lua.diagnostics.disable": [
         "lowercase-global",
-        "redefined-local"
+        "redefined-local",
+        "param-type-mismatch"
     ],
     "Lua.workspace.library": [
         "~\\AppData\\Roaming\\Code\\User\\globalStorage\\astronachos.defold",
@@ -61,5 +62,8 @@
         "*.appmanifest": "yaml",
         "*.script_api": "yaml",
         "ext.manifest": "yaml"
-    }
+    },
+    "Lua.diagnostics.globals": [
+        "path"
+    ]
 }

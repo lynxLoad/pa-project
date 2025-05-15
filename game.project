@@ -20,6 +20,8 @@ scale_mode = stretch
 title = Empty project
 dependencies#0 = https://github.com/Insality/defold-event/archive/refs/tags/11.zip
 dependencies#1 = https://github.com/Insality/druid/archive/refs/tags/1.1.0.zip
+dependencies#2 = https://github.com/subsoap/defos/archive/refs/tags/v2.8.3.zip
+dependencies#3 = https://github.com/selimanac/defold-astar/archive/master.zip
 
 [graphics]
 default_texture_min_filter = nearest

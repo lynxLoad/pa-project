@@ -28,7 +28,6 @@ local function zoom_in(self)
 
 	local width, height = window.get_size()
 	self.scale = math.min(width / BASE_WIDTH, height / BASE_HEIGHT)
-
 	go.animate(camera_path, "orthographic_zoom", go.PLAYBACK_ONCE_FORWARD, self.zoom * self.scale, go.EASING_OUTQUAD, 0.15)
 end
 
@@ -43,12 +42,18 @@ local function zoom_out(self)
 	go.animate(camera_path, "orthographic_zoom", go.PLAYBACK_ONCE_FORWARD, self.zoom * self.scale, go.EASING_OUTQUAD, 0.15)
 end
 
+local function window_listener(self, event, data)
+	if event == window.WINDOW_EVENT_RESIZED then
+		update_camera(self, data.width, data.height)
+	end
+end
+
 function init(self)
 	msg.post(".", "acquire_input_focus")
-	
+
 	self.zoom = camera.get_orthographic_zoom(camera_path)
-	
-	game_events.window_resized:subscribe(update_camera, self)
+
+	window.set_listener(window_listener)
 	update_camera(self, BASE_WIDTH, BASE_HEIGHT)
 
 	self.proj = camera.get_projection(camera_path)
@@ -73,7 +78,7 @@ function on_input(self, action_id, action)
 	local key_down = action_id == hash("key_down")
 	local key_right = action_id == hash("key_right")
 	local key_left = action_id == hash("key_left")
-	
+
 	if drag_input and action.pressed then
 		self.start_cam_pos = go.get_position(go.get_id("/camera"))
 		self.start_mouse_pos = vmath.vector3(action.x, action.y, 0)
@@ -88,18 +93,20 @@ function on_input(self, action_id, action)
 		local current_mouse_pos = vmath.vector3(action.x, action.y, 0)
 
 		local start_world = vmath.screen_to_world(
-			self.start_mouse_pos.x, 
-			self.start_mouse_pos.y, 
+			self.start_mouse_pos.x,
+			self.start_mouse_pos.y,
 			0,
 			self.proj,
-			self.view)
+			self.view
+		)
 
 		local current_world = vmath.screen_to_world(
-			current_mouse_pos.x, 
-			current_mouse_pos.y, 
-			0, 
+			current_mouse_pos.x,
+			current_mouse_pos.y,
+			0,
 			self.proj,
-			self.view)
+			self.view
+		)
 
 		local delta = current_world - start_world
 		local new_pos = self.start_cam_pos - delta
@@ -121,10 +128,11 @@ function on_input(self, action_id, action)
 		self.is_drag_cam = false
 	end
 
+
 	if key_up or key_down or key_right or key_left then
 		local speed = CAM_SPEED / (self.zoom * self.scale)
 		local direction = vmath.vector3(0, 0, 0)
-	
+
 		if key_up then direction.y = 1 end
 		if key_down then direction.y = -1 end
 		if key_right then direction.x = 1 end
@@ -135,10 +143,9 @@ function on_input(self, action_id, action)
 		new_pos.x = math.clamp(new_pos.x, 1, map_width)
 		new_pos.y = math.clamp(new_pos.y, 1, map_height)
 
-		-- нормализация не нужна (движение "ступенькой")
 		go.set_position(new_pos)
 	end
-	
+
 	if zoom_in_input then
 		zoom_in(self)
 	elseif zoom_out_input then
