@@ -1,4 +1,7 @@
 images {
   image: "/assets/sprites/target_cell.png"
 }
+images {
+  image: "/assets/sprites/pawn.png"
+}
 extrude_borders: 2

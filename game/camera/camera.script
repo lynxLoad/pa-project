@@ -5,8 +5,8 @@ local BASE_WIDTH = sys.get_config_int("display.width")
 local BASE_HEIGHT = sys.get_config_int("display.height")
 
 local ZOOM_FACTOR = 1.1
-local BASE_MAX_ZOOM = 5
-local BASE_MIN_ZOOM = 1
+local BASE_MAX_ZOOM = 10
+local BASE_MIN_ZOOM = 2
 local CAM_SPEED = 2.5
 
 local map_width = 0

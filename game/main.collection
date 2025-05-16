@@ -3,6 +3,34 @@ instances {
   id: "camera"
   prototype: "/game/camera/camera.go"
 }
+instances {
+  id: "pawn"
+  prototype: "/game/pawn/pawn.go"
+  position {
+    x: 21.0
+    y: 21.0
+  }
+  component_properties {
+    id: "pawn"
+    properties {
+      id: "position"
+      value: "2.0, 3.0, 0.0"
+      type: PROPERTY_TYPE_VECTOR3
+    }
+  }
+}
+instances {
+  id: "pawn1"
+  prototype: "/game/pawn/pawn.go"
+  component_properties {
+    id: "pawn"
+    properties {
+      id: "position"
+      value: "5.0, 8.0, 0.0"
+      type: PROPERTY_TYPE_VECTOR3
+    }
+  }
+}
 scale_along_z: 0
 embedded_instances {
   id: "tilemap"
@@ -38,7 +66,7 @@ embedded_instances {
   "}\\n"
   "textures {\\n"
   "  sampler: \\\"texture_sampler\\\"\\n"
-  "  texture: \\\"/game/atlas.atlas\\\"\\n"
+  "  texture: \\\"/assets/sprites/atlas.atlas\\\"\\n"
   "}\\n"
   "\"\n"
   "}\n"
@@ -62,4 +90,13 @@ embedded_instances {
   "  component: \"/game/main.script\"\n"
   "}\n"
   ""
+}
+embedded_instances {
+  id: "pawns"
+  children: "pawn"
+  children: "pawn1"
+  data: ""
+  position {
+    z: 1.0
+  }
 }

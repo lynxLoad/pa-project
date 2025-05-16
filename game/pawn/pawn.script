@@ -1,0 +1,11 @@
+go.property("position", vmath.vector3(1, 1, 0))
+
+function init(self)
+	msg.post("/tilemap", "get_pawn_position", { x = self.position.x, y = self.position.y })
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("send_pawn_position") then
+		go.set_position(vmath.vector3(message.x, message.y, self.position.z))
+	end
+end

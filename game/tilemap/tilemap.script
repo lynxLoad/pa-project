@@ -61,7 +61,7 @@ local drag_state = {
 	last_tile = {x = 0, y = 0}
 }
 
-local TILE_SIZE = 16
+local TILE_SIZE = 8
 local DIRECTION_MASKS = {
 	N  = 1,    -- Север (0001)
 	E  = 2,    -- Восток (0010)
@@ -81,6 +81,7 @@ local curr_floor = 1
 local Level = {
 	main = {
 		tiles = {}, -- можно хранить этажи в тайлах [1] = {[y] = {[x] = {tile_id}}}, [2] etc. path получает названия "#floor1", "#floor2" etc
+		astar_map = {},
 		width = 0,
 		height = 0,
 		layer = curr_layer,
@@ -167,12 +168,12 @@ local function set_autotile(map, x, y)
 	local tile_data = TILE_MAPPING[map.layer][mask]
 	if not tile_data then
 		print("Warning: No tile data for mask " .. tostring(mask) .. " at (" .. x .. ", " .. y .. ")")
-		return nil
+		return 0
 	end
 	if tilemap.set_tile(map.path, hash(map.layer), x, y, tile_data.tile_id, tile_data.transform_bitmask) then
 		return 1
 	end
-	return nil
+	return 0
 end
 
 local function update_single_tile(map, x, y)
@@ -252,17 +253,22 @@ end
 local function new_tile(map, x, y)
 	local start_time = os.clock()
 
-	map.tiles[y][x] = set_autotile(map, x, y)
+	local tile = set_autotile(map, x, y)
+	map.tiles[y][x] = tile
+	--map.astar_map[get_astar_tile_index(x, y, map.width)] = tile
+
 	update_neighbors(map, x, y)
 
 	local end_time = os.clock()
 	--print(end_time - start_time)
+	return tile
 end
 
 local function remove_tile(map, x, y)
 	local start_time = os.clock()
 	if tilemap.set_tile(map.path, hash(map.layer), x, y, 0) then
 		map.tiles[y][x] = 0
+		--map.astar_map[get_astar_tile_index(x, y, map.width)] = 0
 	end
 
 	local neighbors = get_neighbors(x, y)
@@ -270,8 +276,7 @@ local function remove_tile(map, x, y)
 		update_single_tile(map, coord[1], coord[2])
 	end
 
-	local end_time = os.clock()
-	--print(end_time - start_time)
+	return 0
 end
 
 -- Определяем границы прямоугольника
@@ -294,16 +299,20 @@ local function delete_region_without_update(plan_map, start_point, end_point)
 	end
 end
 
+local function get_astar_tile_index(x, y, width) return (y - 1) * width + x end
+
 local function delete_region_and_update(plan_map, ref_map, start_point, end_point)
 	local start_y, end_y, start_x, end_x = get_rect_border(start_point, end_point)
 
 	for y = start_y, end_y do
 		for x = start_x, end_x do
-			remove_tile(plan_map, x, y)
+			plan_map.astar_map[get_astar_tile_index(x, y, plan_map.width)] = remove_tile(plan_map, x, y)
 		end
 	end
 
-	astar.set_map(Level.main.tiles)
+	astar.set_map(plan_map.astar_map)
+	astar.map_vflip()
+	astar.print_map()
 end
 
 local function create_region(plan_map, ref_map, start_point, end_point)
@@ -370,12 +379,13 @@ local function create_map_from_region(plan_map, ref_map, start_point, end_point)
 			local plan_tile = plan_map.tiles[y][x]
 			local ref_tile = ref_map.tiles[y][x]
 			if plan_tile ~= 0 and ref_tile == 0 then
-				new_tile(ref_map, x, y)
+				ref_map.astar_map[get_astar_tile_index(x, y, ref_map.width)] = new_tile(ref_map, x, y)
 			end
 		end
 	end
-
-	astar.set_map(Level.main.tiles)
+	astar.set_map(ref_map.astar_map)
+	astar.map_vflip()
+	astar.print_map()
 end
 
 local function create_region_above_ref_tiles(plan_map, ref_map, start_point, end_point)
@@ -404,23 +414,17 @@ local function create_region_above_ref_tiles(plan_map, ref_map, start_point, end
 			end
 		end
 	end
-
 	local end_time = os.clock()
 	--print(end_time - start_time)
 end
 
-function init(self)
+local function setup_map()
 	_, _, Level.main.width, Level.main.height = tilemap.get_bounds(Level.main.path)
 	_, _, Level.plan.width, Level.plan.height = tilemap.get_bounds(Level.main.path)
 
 	Level.main.tiles = tilemap.get_tiles(Level.main.path, hash(Level.main.layer))
 	Level.plan.tiles = tilemap.get_tiles(Level.plan.path, hash(Level.plan.layer))
 
-	msg.post("/camera", "map_initialized", {mw = Level.main.width * TILE_SIZE, mh = Level.main.height * TILE_SIZE})
-
-	msg.post(".", "acquire_input_focus")
-
-	go.set_position(vmath.vector3((Level.main.width * TILE_SIZE) / 2, (Level.main.height * TILE_SIZE) / 2, 0), "/camera#camera")
 	go.set("#plan_tilemap", "tint", vmath.vector4(1, 1, 1, 0.5))
 
 	for y = 1, Level.main.height do
@@ -431,13 +435,15 @@ function init(self)
 			--print("x; " .. x .. " y: " .. y .. " tiles: " .. Level.main.tiles[y][x])
 		end
 	end
+end
 
+local function setup_astar()
 	-- Настройка A*
 	local direction = astar.DIRECTION_FOUR -- 4 направления
 	local allocate = Level.main.width * Level.main.height
 	local typical_adjacent = 4
 	local cache = true  -- Optional. Default is true
-	local use_zero = false -- Optional. Default is false = 1 based
+	local use_zero = true -- Optional. Default is false = 1 based
 	local flip_map = false -- Optional. Default is false
 	local costs = {
 		[0] = {
@@ -449,8 +455,27 @@ function init(self)
 	}
 
 	astar.setup(Level.main.width, Level.main.height, direction, allocate, typical_adjacent, cache, use_zero, flip_map)
-	astar.set_map(Level.main.tiles)
+
+	for y = 1, Level.main.height do
+		for x = 1, Level.main.width do
+			table.insert(Level.main.astar_map, Level.main.tiles[y][x])
+		end
+	end
+
+	astar.set_map(Level.main.astar_map)
+	astar.map_vflip()
 	astar.set_costs(costs)
+	astar.print_map()
+end
+
+function init(self)
+	setup_map()
+	setup_astar()
+
+	go.set_position(vmath.vector3((Level.main.width * TILE_SIZE) / 2, (Level.main.height * TILE_SIZE) / 2, 0), "/camera#camera")
+
+	msg.post(".", "acquire_input_focus")
+	msg.post("/camera", "map_initialized", {mw = Level.main.width * TILE_SIZE, mh = Level.main.height * TILE_SIZE})
 end
 
 function on_input(self, action_id, action)
@@ -563,4 +588,10 @@ function on_input(self, action_id, action)
 		end
 	end
 	--debug_compare_tiles(Level.main)
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("get_pawn_position") then
+		msg.post(sender, "send_pawn_position", { x = message.x * TILE_SIZE - TILE_SIZE / 2, y = message.y * TILE_SIZE - TILE_SIZE / 2 })
+	end
 end
