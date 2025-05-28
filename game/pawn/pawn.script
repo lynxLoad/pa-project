@@ -1,11 +1,38 @@
-go.property("position", vmath.vector3(1, 1, 0))
+go.property("start_position", vmath.vector3(1, 1, 0))
+
+local map_config = require("game.tilemap.map_config")
+
+local tile_size = map_config.tile_size
 
 function init(self)
-	msg.post("/tilemap", "get_pawn_position", { x = self.position.x, y = self.position.y })
+	self.is_target = false
+
+	local spx, spy = tilemap.tile_to_world(self.start_position.x, self.start_position.y)
+	go.set_position(vmath.vector3(spx, spy, self.start_position.z))
+	msg.post(map_config.tilemap_path, "send_pawn", { x = self.start_position.x, y = self.start_position.y })
+end
+
+local function move_to(x, y)
+	msg.post(tilemap, "get_astar")
+end
+
+function on_input(self, action_id, action)
+	if self.is_target then
+		local world = vmath.screen_to_world(action.x, action.y, 0, camera.get_projection("/camera#camera"), camera.get_view("/camera#camera"))
+		local tile_x, tile_y = tilemap.world_to_tile(world.x, world.y)
+
+		-- Корректируем координаты, чтобы оставались в пределах карты
+		tile_x = math.clamp(tile_x, 1, Level.main.width)
+		tile_y = math.clamp(tile_y, 1, Level.main.height)
+	end
 end
 
 function on_message(self, message_id, message, sender)
-	if message_id == hash("send_pawn_position") then
-		go.set_position(vmath.vector3(message.x, message.y, self.position.z))
+	if message_id == hash("send_pawn_start_position") then
+		go.set_position(vmath.vector3(message.x, message.y, self.start_position.z))
+	end
+	if message_id == hash("set_target_pawn") then
+		self.is_target = true
+		astar.print_map()
 	end
 end

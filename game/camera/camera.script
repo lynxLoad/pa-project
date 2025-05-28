@@ -1,11 +1,9 @@
 
-local game_events = require("management.game_events")
-
 local BASE_WIDTH = sys.get_config_int("display.width")
 local BASE_HEIGHT = sys.get_config_int("display.height")
 
 local ZOOM_FACTOR = 1.1
-local BASE_MAX_ZOOM = 10
+local BASE_MAX_ZOOM = 8.5
 local BASE_MIN_ZOOM = 2
 local CAM_SPEED = 2.5
 
@@ -64,10 +62,6 @@ function on_message(self, message_id, message)
 	if message_id == hash("map_initialized") then
 		map_width, map_height = message.mw, message.mh
 	end
-end
-
-function final(self)
-	game_events.window_resized:unsubscribe(update_camera, self)
 end
 
 function on_input(self, action_id, action)

@@ -4,4 +4,10 @@ images {
 images {
   image: "/assets/sprites/pawn.png"
 }
+images {
+  image: "/assets/sprites/icons/build_mode.png"
+}
+images {
+  image: "/assets/sprites/empty.png"
+}
 extrude_borders: 2

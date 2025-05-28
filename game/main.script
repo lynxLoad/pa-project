@@ -1,3 +1,4 @@
+local map_config = require("game.tilemap.map_config")
 
 function math.clamp(n, min, max) return math.min(math.max(n, min), max) end
 
@@ -18,4 +19,18 @@ function vmath.screen_to_world(x, y, z, proj, view)
 	local z1 = x * inv.m20 + y * inv.m21 + z * inv.m22 + inv.m23
 
 	return vmath.vector3(x1, y1, z1)
+end
+
+function tilemap.tile_to_world(x, y)
+	local tile_size = map_config.tile_size
+	local wrldx = tile_size * (x - 1) + tile_size / 2
+	local wrldy = tile_size * (y - 1) + tile_size / 2
+	return wrldx, wrldy
+end
+
+function tilemap.world_to_tile(x, y)
+	local tile_size = map_config.tile_size
+	local coordx = math.ceil(x / tile_size)
+	local coordy = math.ceil(y / tile_size)
+	return coordx, coordy
 end

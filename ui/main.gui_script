@@ -1,5 +1,5 @@
 local druid = require("ui.druid.druid")
-local Button = require("ui.elements.button")
+local CheckBtn = require("ui.elements.check_btn")
 
 local function on_mouse_hover(widget)
 	local is_hover = widget.hover:is_mouse_hovered()
@@ -7,10 +7,26 @@ local function on_mouse_hover(widget)
 	--gui.set(gui.get_node("btn"), "color", vmath.vector4(1, 0, 0, 1))
 end
 
+local function set_active(active)
+	if not active then
+		gui.set(gui.get_node("check_btn"), "color", vmath.vector4(1,1,1,0.6))
+	else 
+		gui.set(gui.get_node("check_btn"), "color", vmath.vector4(1,1,1,1))
+	end
+	msg.post("/tilemap", "build_mode_changed", { activate = active })
+end
+
+local function on_active(active)
+	set_active(active)
+end
+
 function init(self)
 	self.druid = druid.new(self)
-	self.button = self.druid:new_widget(Button, nil)
-	self.button.hover.on_mouse_hover:subscribe(on_mouse_hover, self.button)
+	self.check_btn = self.druid:new_widget(CheckBtn, nil)
+	self.check_btn.hover.on_mouse_hover:subscribe(on_mouse_hover, self.button)
+	self.check_btn.on_active:subscribe(on_active)
+	set_active(false)
+	msg.post("/tilemap", "build_mode_changed", { activate = false })
 end
 
 function final(self)

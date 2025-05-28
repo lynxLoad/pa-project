@@ -1,4 +1,5 @@
 local game_events = require("management.game_events")
+local map_config = require("game.tilemap.map_config")
 
 local TILE_MAPPING = {
 	walls = {
@@ -61,7 +62,7 @@ local drag_state = {
 	last_tile = {x = 0, y = 0}
 }
 
-local TILE_SIZE = 8
+local TILE_SIZE = map_config.tile_size
 local DIRECTION_MASKS = {
 	N  = 1,    -- Север (0001)
 	E  = 2,    -- Восток (0010)
@@ -76,67 +77,67 @@ local layers = {
 	GROUND = "ground",
 	WALLS = "walls"
 }
-local curr_layer = layers.WALLS
-local curr_floor = 1
+local curr_layer = layers.WALLS -- текущий слой, используется для рисования
 local Level = {
 	main = {
-		tiles = {}, -- можно хранить этажи в тайлах [1] = {[y] = {[x] = {tile_id}}}, [2] etc. path получает названия "#floor1", "#floor2" etc
-		astar_map = {},
-		width = 0,
-		height = 0,
+		tiles = {}, -- tiles - зеркало tilemap.get_tiles, где 0 означает пол, 1 - стены
+		astar_map = {}, -- в astar_map 0 - проходимые клетки (полы), 1 - непроходимые (стены)
+		entities = {},
 		layer = curr_layer,
-		path
+		path = "#map"
 	},
 	plan = {
 		tiles = {},
-		width = 0,
-		height = 0,
 		layer = curr_layer,
 		path = "#plan_tilemap",
 		delete_mark_tile = 71,
 	}
 }
+local entities_types = {
+	PAWN = 0,
+	ITEM = 1
+}
+function Level:add_entity(type, url, x, y)
+	local new_entity = {
+		type = type,
+		url = url,
+		x = x,
+		y = y
+	}
 
-setmetatable(Level.main, {
-	__index = function(table, key)
-		if key == "path" then
-			return "#floor" .. curr_floor
-		end
-	end
-})
+	self.main.entities[y] = self.main.entities[y] or {}
+	self.main.entities[y][x] = self.main.entities[y][x] or {}
 
-local function tile_to_world(x, y)
-	local wrldx = TILE_SIZE * (x - 1) + TILE_SIZE / 2
-	local wrldy = TILE_SIZE * (y - 1) + TILE_SIZE / 2
-	return wrldx, wrldy
+	table.insert(self.main.entities[y][x], new_entity)
+
+	return new_entity
 end
-
-local function world_to_tile(x, y)
-	local coordx = math.ceil(x / TILE_SIZE)
-	local coordy = math.ceil(y / TILE_SIZE)
-	return coordx, coordy
-end
+local modes = {
+	BUILD = 0,
+	SELECT = 1
+}
+local MAP_MODE = modes.SELECT
 
 local function is_out_of_bounds(x, y, width, height)
 	return x < 1 or x > width or y < 1 or y > height
 end
 
-local function find_mask(map, x, y)
+local function find_mask(x, y, tiles, width, height)
 	local mask = 0
 	local xm, xp, ym, yp = x - 1, x + 1, y - 1, y + 1
-	local tiles = map.tiles
+	local tiles = tiles
 
-	if is_out_of_bounds(x, y, map.width, map.height) then
+	if is_out_of_bounds(x, y, width, height) then
 		return 0
 	end
 
 	local row_curr = tiles[y] or {}
 	local row_prev = ym >= 1 and tiles[ym] or {}
-	local row_next = yp <= map.height and tiles[yp] or {}
+	local row_next = yp <= height and tiles[yp] or {}
 
 	-- Проверка ортогональных соседей
-	local has_N = yp <= map.height and row_next[x] and row_next[x] ~= 0
-	local has_E = xp <= map.width and row_curr[xp] and row_curr[xp] ~= 0
+	local has_N = yp <= height and row_next[x] and row_next[x] ~= 0
+	local has_E = xp <= width and row_curr[xp] and row_curr[xp] ~= 0
 	local has_S = ym >= 1 and row_prev[x] and row_prev[x] ~= 0
 	local has_W = xm >= 1 and row_curr[xm] and row_curr[xm] ~= 0
 
@@ -147,10 +148,10 @@ local function find_mask(map, x, y)
 	if has_W then mask = mask + DIRECTION_MASKS.W end
 
 	-- Проверка диагоналей
-	if has_N and has_E and xp <= map.width and row_next[xp] and row_next[xp] ~= 0 then
+	if has_N and has_E and xp <= width and row_next[xp] and row_next[xp] ~= 0 then
 		mask = mask + DIRECTION_MASKS.NE
 	end
-	if has_S and has_E and xp <= map.width and row_prev[xp] and row_prev[xp] ~= 0 then
+	if has_S and has_E and xp <= width and row_prev[xp] and row_prev[xp] ~= 0 then
 		mask = mask + DIRECTION_MASKS.SE
 	end
 	if has_S and has_W and xm >= 1 and row_prev[xm] and row_prev[xm] ~= 0 then
@@ -164,7 +165,7 @@ local function find_mask(map, x, y)
 end
 
 local function set_autotile(map, x, y)
-	local mask = find_mask(map, x, y)
+	local mask = find_mask(x, y, map.tiles, map_config.width, map_config.height)
 	local tile_data = TILE_MAPPING[map.layer][mask]
 	if not tile_data then
 		print("Warning: No tile data for mask " .. tostring(mask) .. " at (" .. x .. ", " .. y .. ")")
@@ -177,7 +178,7 @@ local function set_autotile(map, x, y)
 end
 
 local function update_single_tile(map, x, y)
-	if is_out_of_bounds(x, y, map.width, map.height) then
+	if is_out_of_bounds(x, y, map_config.width, map_config.height) then
 		return
 	end
 	local row = map.tiles[y]
@@ -299,19 +300,18 @@ local function delete_region_without_update(plan_map, start_point, end_point)
 	end
 end
 
-local function get_astar_tile_index(x, y, width) return (y - 1) * width + x end
+local function coords_to_index(x, y, width) return (y - 1) * width + x end
 
 local function delete_region_and_update(plan_map, ref_map, start_point, end_point)
 	local start_y, end_y, start_x, end_x = get_rect_border(start_point, end_point)
 
 	for y = start_y, end_y do
 		for x = start_x, end_x do
-			plan_map.astar_map[get_astar_tile_index(x, y, plan_map.width)] = remove_tile(plan_map, x, y)
+			plan_map.astar_map[coords_to_index(x, y, map_config.width)] = remove_tile(plan_map, x, y)
 		end
 	end
 
 	astar.set_map(plan_map.astar_map)
-	astar.map_vflip()
 	astar.print_map()
 end
 
@@ -320,16 +320,17 @@ local function create_region(plan_map, ref_map, start_point, end_point)
 
 	for y = start_y, end_y do
 		for x = start_x, end_x do
+			local cell_entities = Level.main.entities[y] and Level.main.entities[y][x]
 			local plan_tile = plan_map.tiles[y][x]
 			local ref_tile = ref_map.tiles[y][x]
-			if plan_tile == 0 and ref_tile == 0 then
+			if plan_tile == 0 and ref_tile == 0 and not cell_entities then
 				new_tile(plan_map, x, y)
 			end
 		end
 	end
 
-	for y = math.max(1, start_y - 40), math.min(ref_map.height, end_y + 40) do
-		for x = math.max(1, start_x - 40), math.min(ref_map.width, end_x + 40) do
+	for y = math.max(1, start_y - 40), math.min(map_config.height, end_y + 40) do
+		for x = math.max(1, start_x - 40), math.min(map_config.width, end_x + 40) do
 			if plan_map.tiles[y][x] ~= 0 then
 				if x < start_x or x > end_x or y < start_y or y > end_y then
 					remove_tile(plan_map, x, y)
@@ -348,17 +349,18 @@ local function create_border_region(plan_map, ref_map, start_point, end_point)
 			local is_border = (x == start_x or x == end_x or y == start_y or y == end_y)
 
 			if is_border then
+				local cell_entities = Level.main.entities[y] and Level.main.entities[y][x]
 				local plan_tile = plan_map.tiles[y][x]
 				local ref_tile = ref_map.tiles[y][x]
-				if plan_tile == 0 and ref_tile == 0 then
+				if plan_tile == 0 and ref_tile == 0 and not cell_entities then
 					new_tile(plan_map, x, y)
 				end
 			end
 		end
 	end
 
-	for y = math.max(1, start_y - 40), math.min(ref_map.height, end_y + 40) do
-		for x = math.max(1, start_x - 40), math.min(ref_map.width, end_x + 40) do
+	for y = math.max(1, start_y - 40), math.min(map_config.height, end_y + 40) do
+		for x = math.max(1, start_x - 40), math.min(map_config.width, end_x + 40) do
 			if plan_map.tiles[y][x] ~= 0 then
 				local is_inside = (x >= start_x and x <= end_x and y >= start_y and y <= end_y)
 				local is_border = (x == start_x or x == end_x or y == start_y or y == end_y)
@@ -379,12 +381,11 @@ local function create_map_from_region(plan_map, ref_map, start_point, end_point)
 			local plan_tile = plan_map.tiles[y][x]
 			local ref_tile = ref_map.tiles[y][x]
 			if plan_tile ~= 0 and ref_tile == 0 then
-				ref_map.astar_map[get_astar_tile_index(x, y, ref_map.width)] = new_tile(ref_map, x, y)
+				ref_map.astar_map[coords_to_index(x, y, map_config.width)] = new_tile(ref_map, x, y)
 			end
 		end
 	end
 	astar.set_map(ref_map.astar_map)
-	astar.map_vflip()
 	astar.print_map()
 end
 
@@ -403,8 +404,8 @@ local function create_region_above_ref_tiles(plan_map, ref_map, start_point, end
 		end
 	end
 
-	for y = math.max(1, start_y - 40), math.min(ref_map.height, end_y + 40) do
-		for x = math.max(1, start_x - 40), math.min(ref_map.width, end_x + 40) do
+	for y = math.max(1, start_y - 40), math.min(map_config.height, end_y + 40) do
+		for x = math.max(1, start_x - 40), math.min(map_config.width, end_x + 40) do
 			if plan_map.tiles[y][x] ~= 0 then
 				if x < start_x or x > end_x or y < start_y or y > end_y then
 					if tilemap.set_tile(plan_map.path, hash(plan_map.layer), x, y, 0) then
@@ -419,16 +420,15 @@ local function create_region_above_ref_tiles(plan_map, ref_map, start_point, end
 end
 
 local function setup_map()
-	_, _, Level.main.width, Level.main.height = tilemap.get_bounds(Level.main.path)
-	_, _, Level.plan.width, Level.plan.height = tilemap.get_bounds(Level.main.path)
+	_, _, map_config.width, map_config.height = tilemap.get_bounds(Level.main.path)
 
 	Level.main.tiles = tilemap.get_tiles(Level.main.path, hash(Level.main.layer))
 	Level.plan.tiles = tilemap.get_tiles(Level.plan.path, hash(Level.plan.layer))
 
 	go.set("#plan_tilemap", "tint", vmath.vector4(1, 1, 1, 0.5))
 
-	for y = 1, Level.main.height do
-		for x = 1, Level.main.width do
+	for y = 1, map_config.height do
+		for x = 1, map_config.width do
 			if Level.main.tiles[y][x] ~= 0 then
 				Level.main.tiles[y][x] = set_autotile(Level.main, x, y)
 			end
@@ -440,7 +440,7 @@ end
 local function setup_astar()
 	-- Настройка A*
 	local direction = astar.DIRECTION_FOUR -- 4 направления
-	local allocate = Level.main.width * Level.main.height
+	local allocate = map_config.width * map_config.height
 	local typical_adjacent = 4
 	local cache = true  -- Optional. Default is true
 	local use_zero = true -- Optional. Default is false = 1 based
@@ -454,45 +454,65 @@ local function setup_astar()
 		}
 	}
 
-	astar.setup(Level.main.width, Level.main.height, direction, allocate, typical_adjacent, cache, use_zero, flip_map)
+	astar.setup(map_config.width, map_config.height, direction, allocate, typical_adjacent, cache, use_zero, flip_map)
 
-	for y = 1, Level.main.height do
-		for x = 1, Level.main.width do
+	for y = 1, map_config.height do
+		for x = 1, map_config.width do
 			table.insert(Level.main.astar_map, Level.main.tiles[y][x])
 		end
 	end
 
 	astar.set_map(Level.main.astar_map)
-	astar.map_vflip()
 	astar.set_costs(costs)
 	astar.print_map()
 end
 
+
+local function index_to_coords(index, width)
+	local x = ((index - 1) % width) + 1
+	local y = math.floor((index - 1) / width) + 1
+	return x, y
+end
+
 function init(self)
+	print("hello","world")
 	setup_map()
 	setup_astar()
 
-	go.set_position(vmath.vector3((Level.main.width * TILE_SIZE) / 2, (Level.main.height * TILE_SIZE) / 2, 0), "/camera#camera")
+	go.set_position(vmath.vector3((map_config.width * TILE_SIZE) / 2, (map_config.height * TILE_SIZE) / 2, 0), "/camera#camera")
 
 	msg.post(".", "acquire_input_focus")
-	msg.post("/camera", "map_initialized", {mw = Level.main.width * TILE_SIZE, mh = Level.main.height * TILE_SIZE})
+	msg.post("/camera", "map_initialized", {mw = map_config.width * TILE_SIZE, mh = map_config.height * TILE_SIZE})
 end
 
 function on_input(self, action_id, action)
+	local mouse_button_left = action_id == hash("mouse_button_left")
+	local mouse_button_right = action_id == hash("mouse_button_right")
 
 	local world = vmath.screen_to_world(action.x, action.y, 0, camera.get_projection("/camera#camera"), camera.get_view("/camera#camera"))
-	local tile_x, tile_y = world_to_tile(world.x, world.y)
+	local tile_x, tile_y = tilemap.world_to_tile(world.x, world.y)
 
 	-- Корректируем координаты, чтобы оставались в пределах карты
-	tile_x = math.clamp(tile_x, 1, Level.main.width)
-	tile_y = math.clamp(tile_y, 1, Level.main.height)
+	tile_x = math.clamp(tile_x, 1, map_config.width)
+	tile_y = math.clamp(tile_y, 1, map_config.height)
 
 	-- Проверяем, изменилась ли клетка
 	local tile_changed = tile_x ~= drag_state.last_tile.x or tile_y ~= drag_state.last_tile.y
 
+	if MAP_MODE == modes.SELECT then
+		if (mouse_button_left and action.pressed) and (Level.main.entities[tile_y] and Level.main.entities[tile_y][tile_x]) then
+			msg.post(Level.main.entities[tile_y][tile_x][1].url, "set_target_pawn")
+		end
+		return
+	end
+
+	if MAP_MODE ~= modes.BUILD then
+		return
+	end
+
 	if tile_changed then
 
-		local x, y = tile_to_world(tile_x, tile_y)
+		local x, y = tilemap.tile_to_world(tile_x, tile_y)
 		go.set_position(vmath.vector3(x, y, 1), "/target_cell")
 
 		drag_state.last_tile.x = tile_x
@@ -513,9 +533,6 @@ function on_input(self, action_id, action)
 	end
 
 	local is_ui_mouse_hovered = game_events.is_ui_mouse_hovered
-
-	local mouse_button_left = action_id == hash("mouse_button_left")
-	local mouse_button_right = action_id == hash("mouse_button_right")
 
 	if mouse_button_left and action.pressed then
 		if drag_state.is_drag then
@@ -590,8 +607,21 @@ function on_input(self, action_id, action)
 	--debug_compare_tiles(Level.main)
 end
 
+local function change_build_mode(activate)
+	if activate then 
+		MAP_MODE = modes.BUILD
+		go.set_scale(vmath.vector3(1,1,1), "/target_cell")
+	else
+		MAP_MODE = modes.SELECT
+		go.set_scale(vmath.vector3(0.001,0.001,1), "/target_cell")
+	end
+end
+
 function on_message(self, message_id, message, sender)
-	if message_id == hash("get_pawn_position") then
-		msg.post(sender, "send_pawn_position", { x = message.x * TILE_SIZE - TILE_SIZE / 2, y = message.y * TILE_SIZE - TILE_SIZE / 2 })
+	if message_id == hash("send_pawn") then
+		Level:add_entity(entities_types.PAWN, sender, message.x, message.y)
+	end
+	if message_id == hash("build_mode_changed") then
+		change_build_mode(message.activate)
 	end
 end

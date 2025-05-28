@@ -10,14 +10,6 @@ instances {
     x: 21.0
     y: 21.0
   }
-  component_properties {
-    id: "pawn"
-    properties {
-      id: "position"
-      value: "2.0, 3.0, 0.0"
-      type: PROPERTY_TYPE_VECTOR3
-    }
-  }
 }
 instances {
   id: "pawn1"
@@ -25,8 +17,8 @@ instances {
   component_properties {
     id: "pawn"
     properties {
-      id: "position"
-      value: "5.0, 8.0, 0.0"
+      id: "start_position"
+      value: "1.0, 2.0, 0.0"
       type: PROPERTY_TYPE_VECTOR3
     }
   }
@@ -36,7 +28,7 @@ embedded_instances {
   id: "tilemap"
   children: "target_cell"
   data: "components {\n"
-  "  id: \"floor1\"\n"
+  "  id: \"map\"\n"
   "  component: \"/game/tilemap/tilemap.tilemap\"\n"
   "}\n"
   "components {\n"
