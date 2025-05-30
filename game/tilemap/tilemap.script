@@ -312,7 +312,6 @@ local function delete_region_and_update(plan_map, ref_map, start_point, end_poin
 	end
 
 	astar.set_map(plan_map.astar_map)
-	astar.print_map()
 end
 
 local function create_region(plan_map, ref_map, start_point, end_point)
@@ -386,7 +385,6 @@ local function create_map_from_region(plan_map, ref_map, start_point, end_point)
 		end
 	end
 	astar.set_map(ref_map.astar_map)
-	astar.print_map()
 end
 
 local function create_region_above_ref_tiles(plan_map, ref_map, start_point, end_point)
@@ -443,7 +441,7 @@ local function setup_astar()
 	local allocate = map_config.width * map_config.height
 	local typical_adjacent = 4
 	local cache = true  -- Optional. Default is true
-	local use_zero = true -- Optional. Default is false = 1 based
+	local use_zero = false -- Optional. Default is false = 1 based
 	local flip_map = false -- Optional. Default is false
 	local costs = {
 		[0] = {
@@ -464,7 +462,6 @@ local function setup_astar()
 
 	astar.set_map(Level.main.astar_map)
 	astar.set_costs(costs)
-	astar.print_map()
 end
 
 

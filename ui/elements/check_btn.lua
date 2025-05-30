@@ -9,7 +9,6 @@ function M:init()
 	self.check_btn = self.druid:new_button("check_btn", self.on_click)
 	self.check_btn.on_hold_callback:subscribe(self.on_hold_callback)
 	self.hover = self.druid:new_hover("check_btn", self.on_hover_callback, self.on_mouse_hover_callback)
-	
 	self.text = self.druid:new_text("text", "Hello, Druid!")
 
 	self.active = false
