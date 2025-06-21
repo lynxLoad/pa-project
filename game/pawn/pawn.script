@@ -2,30 +2,36 @@ go.property("start_position", vmath.vector3(1, 1, 0))
 
 local map_config = require("game.tilemap.map_config")
 
-local tile_size = map_config.tile_size
+local function set_target(self, is_target)
+	self.is_target = is_target
+	if self.is_target then
+		go.set("#sprite", "tint", vmath.vector4(1,1,1,1))
+	else
+		go.set("#sprite", "tint", vmath.vector4(0.7,0.7,0.7,1))
+	end
+end
 
 function init(self)
 	self.position = vmath.vector3(0,0,0)
-	self.current_path = {}
 	self.is_target = false
+	self.current_path = {}
 
 	local spx, spy = tilemap.tile_to_world(self.start_position.x, self.start_position.y)
 	go.set_position(vmath.vector3(spx, spy, self.start_position.z))
 	msg.post(map_config.tilemap_path, "send_pawn", { x = self.start_position.x, y = self.start_position.y })
 
+	table.insert(require("game.pawn.pawn_data").pawn_collection, { url = msg.url() })
+
 	msg.post(".", "acquire_input_focus")
+
+	set_target(self, false)
 end
 
-local function stop_moving(self)
-	timer.cancel(self.move_handle)
-	self.move_handle = nil
-end
+local function create_path(self, end_x, end_y)
+	local world_pos = go.get_position()
+	local start_x, start_y = tilemap.world_to_tile(world_pos.x, world_pos.y)
+	local status, _, _, path = astar.solve(start_x, start_y, end_x, end_y)
 
-local function move_to(self, end_x, end_y)
-    local world_pos = go.get_position()
-    local start_x, start_y = tilemap.world_to_tile(world_pos.x, world_pos.y)
-    local status, _, _, path = astar.solve(start_x, start_y, end_x, end_y)
-    
 	local function compare_paths(path1, path2)
 		if #path1 ~= #path2 then
 			return false
@@ -40,69 +46,43 @@ local function move_to(self, end_x, end_y)
 		return true
 	end
 
-    -- Удаляем первую точку (текущую позицию)
-    if path then 
+	-- Удаляем первую точку (текущую позицию)
+	if path then 
 		local path_x, path_y = tilemap.tile_to_world(path[1].x, path[1].y)
-		if path_x == world_pos.x and path_y == world_pos.y then
+		if (path_x == world_pos.x and path_y == world_pos.y) then
 			table.remove(path, 1)
 		end
 
 		if compare_paths(self.current_path, path) then
-			return
+			return nil, status
 		end
 	end
 
-    if status == astar.START_END_SAME or status == astar.NO_SOLUTION then
-        print("Остановка")
-        go.cancel_animations(".", "position")
-        if self.move_handle then
-            stop_moving(self)
-        end
-        self.is_moving = false
-        go.set_position(self.position)  -- Фиксируем позицию
-        return  -- Выходим, чтобы не продолжать движение
-    end
+	return path, status
+end
 
-    if status == astar.SOLVED then
-        print("SOLVED")
-        self.is_moving = true
-        self.current_path = path
-        
-        if self.move_handle then 
-            stop_moving(self)
-        end
+local function move(self)
+	local point_x, point_y = tilemap.tile_to_world(self.current_path[1].x, self.current_path[1].y)
+	go.set_position(vmath.vector3(point_x, point_y, go.get_position().z))
+	table.remove(self.current_path, 1)
+	if #self.current_path == 0 then
+		self.is_move = false
+	end
+end
 
-        local function move_step(self)
-            if #self.current_path == 0 then
-                print("stopped")
-                self.is_moving = false
-                if self.move_handle then
-                    stop_moving(self)
-                end
-                return
-            end
-            
-            local coord = self.current_path[1]
-            local coord_x, coord_y = tilemap.tile_to_world(coord.x, coord.y)
-            local target_pos = vmath.vector3(coord_x, coord_y, self.position.z)
-            self.position = target_pos
+local function move_to(self, x, y)
+	local path, status = create_path(self, x, y)
+	if path then
+		self.current_path = path
+	end
 
-            go.animate(".", "position", go.PLAYBACK_ONCE_FORWARD, target_pos, go.EASING_OUTSINE, 0.3, 0, function()
-                table.remove(self.current_path, 1)
-                print("moving to", coord_x, coord_y)
-                
-                if #self.current_path > 0 then
-                    self.move_handle = timer.delay(0.1, false, function()
-                        move_step(self)
-                    end)
-                else
-                    self.is_moving = false
-                end
-            end)
-        end
-
-        move_step(self)
-    end
+	if status == astar.SOLVED then
+		self.is_move = true
+	elseif status == astar.START_END_SAME then
+		if #self.current_path > 0 then self.current_path = { x = self.current_path[1].x, y = self.current_path[1].y } end
+	elseif status == astar.NO_SOLUTION then
+		self.is_move = false
+	end
 end
 
 function on_input(self, action_id, action)
@@ -116,7 +96,7 @@ function on_input(self, action_id, action)
 			-- Корректируем координаты, чтобы оставались в пределах карты
 			tile_x = math.clamp(tile_x, 1, map_config.width)
 			tile_y = math.clamp(tile_y, 1, map_config.height)
-
+			
 			move_to(self, tile_x, tile_y)
 		end
 	end
@@ -128,6 +108,13 @@ function on_message(self, message_id, message, sender)
 		self.position = self.start_position
 	end
 	if message_id == hash("set_target_pawn") then
-		self.is_target = true
+		set_target(self, true)
+	end
+	if message_id == hash("tick") then
+		if self.is_move then
+			if #self.current_path > 0 then
+				move(self)
+			end
+		end
 	end
 end

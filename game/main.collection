@@ -10,18 +10,18 @@ instances {
     x: 21.0
     y: 21.0
   }
-}
-instances {
-  id: "pawn1"
-  prototype: "/game/pawn/pawn.go"
   component_properties {
     id: "pawn"
     properties {
       id: "start_position"
-      value: "1.0, 2.0, 0.0"
+      value: "2.0, 1.0, 0.0"
       type: PROPERTY_TYPE_VECTOR3
     }
   }
+}
+instances {
+  id: "pawn1"
+  prototype: "/game/pawn/pawn.go"
 }
 scale_along_z: 0
 embedded_instances {
@@ -80,6 +80,10 @@ embedded_instances {
   data: "components {\n"
   "  id: \"main\"\n"
   "  component: \"/game/main.script\"\n"
+  "}\n"
+  "components {\n"
+  "  id: \"time\"\n"
+  "  component: \"/game/time/time.script\"\n"
   "}\n"
   ""
 }

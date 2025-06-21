@@ -1,0 +1,22 @@
+
+local pawn_data = require("game.pawn.pawn_data")
+local time_scale = 1.0
+
+local function tick(self)
+	for _, p in pairs(pawn_data.pawn_collection) do
+		msg.post(p.url, "tick", { time = self.time, time_scale = time_scale })
+	end
+end
+
+function init(self)
+	self.def_time = 0.5
+	self.time = self.def_time
+end
+
+function fixed_update(self, dt)
+	self.time = self.time - dt * time_scale
+	if self.time <= 0 then
+		self.time = self.def_time
+		tick(self)
+	end
+end

@@ -557,15 +557,8 @@ function on_input(self, action_id, action)
 
 		drag_state.is_drag = false
 
-		-- Если клетка не изменилась (одиночный клик), создаём тайл в начальной точке
-		if drag_state.start.x == drag_state.last_tile.x and drag_state.start.y == drag_state.last_tile.y then
-			create_map_from_region(Level.plan, Level.main, drag_state.start, drag_state.start)
-			delete_region_without_update(Level.plan, drag_state.start, drag_state.start)
-		else
-			-- Обычная обработка для перетаскивания
-			create_map_from_region(Level.plan, Level.main, drag_state.start, drag_state.last_tile)
-			delete_region_without_update(Level.plan, drag_state.start, drag_state.last_tile)
-		end
+		create_map_from_region(Level.plan, Level.main, drag_state.start, drag_state.last_tile)
+		delete_region_without_update(Level.plan, drag_state.start, drag_state.last_tile)
 	end
 	if mouse_button_right and action.pressed then
 		if drag_state.is_drag then
