@@ -1,22 +1,59 @@
 
 local pawn_data = require("game.pawn.pawn_data")
-local time_scale = 1.0
+local time = require("game.time.time")
 
-local function tick(self)
+-- Концептуальная заготовка для модов
+function init(self)
+	for k, v in pairs(time) do
+		print("k:", k, "v:", v)
+	end
+	
+	-- Получаем путь к файлу мода
+	local mod_path = sys.get_application_path() .. "/mod/pawn.lua"
+	print("Mod path:", mod_path)
+
+	local chunk, err = loadfile(mod_path)
+	if not chunk then
+		print("Failed to load mod: " .. (err or "unknown error"))
+		return
+	end
+	
+	local ok, mod = pcall(chunk)
+	if not ok then
+		print("Error executing mod: " .. tostring(mod))
+		return
+	end
+	if not mod then
+		print("Module did not return a value")
+		return
+	end
+
+	-- Кэшируем модуль
+	package.loaded["game.pawn.pawn"] = mod
+	time = package.loaded["game.pawn.pawn"]
+	time = require("game.pawn.pawn")
+	
+	print("Module loaded and cached")
+
+	for k, _ in pairs(package.loaded) do
+		print("package:", k)
+	end
+
+	-- Проверяем содержимое модуля
+	print("time.time_scale:", time.time_scale) -- Ожидаем 1
+	print("time.time:", time.time)           -- Ожидаем 0.5
+end
+
+local function tick()
 	for _, p in pairs(pawn_data.pawn_collection) do
-		msg.post(p.url, "tick", { time = self.time, time_scale = time_scale })
+		msg.post(p.url, "tick", { time = time.time, time_scale = time.time_scale })
 	end
 end
 
-function init(self)
-	self.def_time = 0.5
-	self.time = self.def_time
-end
-
 function fixed_update(self, dt)
-	self.time = self.time - dt * time_scale
-	if self.time <= 0 then
-		self.time = self.def_time
-		tick(self)
+	time.time = time.time - dt * time.time_scale
+	if time.time <= 0 then
+		time.time = time.def_time
+		tick()
 	end
 end

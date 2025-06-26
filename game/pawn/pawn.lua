@@ -1,4 +1,5 @@
-go.property("start_position", vmath.vector3(1, 1, 0))
+-- pawn.lua
+local M = {}
 
 local map_config = require("game.tilemap.map_config")
 
@@ -11,22 +12,6 @@ local function set_target(self, is_target)
 	end
 end
 
-function init(self)
-	self.position = vmath.vector3(0,0,0)
-	self.is_target = false
-	self.current_path = {}
-
-	local spx, spy = tilemap.tile_to_world(self.start_position.x, self.start_position.y)
-	go.set_position(vmath.vector3(spx, spy, self.start_position.z))
-	msg.post(map_config.tilemap_path, "send_pawn", { x = self.start_position.x, y = self.start_position.y })
-
-	table.insert(require("game.pawn.pawn_data").pawn_collection, { url = msg.url() })
-
-	msg.post(".", "acquire_input_focus")
-
-	set_target(self, false)
-end
-
 local function create_path(self, end_x, end_y)
 	local world_pos = go.get_position()
 	local start_x, start_y = tilemap.world_to_tile(world_pos.x, world_pos.y)
@@ -36,20 +21,21 @@ local function create_path(self, end_x, end_y)
 		if #path1 ~= #path2 then
 			return false
 		end
-		
+
 		for i = 1, #path1 do
 			if path1[i].x ~= path2[i].x or path1[i].y ~= path2[i].y then
 				return false
 			end
 		end
-		
+
 		return true
 	end
 
 	-- Удаляем первую точку (текущую позицию)
 	if path then 
-		local path_x, path_y = tilemap.tile_to_world(path[1].x, path[1].y)
-		if (path_x == world_pos.x and path_y == world_pos.y) then
+		--local path_x, path_y = tilemap.tile_to_world(path[1].x, path[1].y)
+		--if (path_x == world_pos.x and path_y == world_pos.y) then
+		if #path > 1 then
 			table.remove(path, 1)
 		end
 
@@ -63,7 +49,8 @@ end
 
 local function move(self)
 	local point_x, point_y = tilemap.tile_to_world(self.current_path[1].x, self.current_path[1].y)
-	go.set_position(vmath.vector3(point_x, point_y, go.get_position().z))
+	--go.set_position(vmath.vector3(point_x, point_y, go.get_position().z))
+	go.animate(".", "position", go.PLAYBACK_ONCE_FORWARD, vmath.vector3(point_x, point_y, go.get_position().z), go.EASING_OUTSINE, 0.3)
 	table.remove(self.current_path, 1)
 	if #self.current_path == 0 then
 		self.is_move = false
@@ -85,7 +72,26 @@ local function move_to(self, x, y)
 	end
 end
 
-function on_input(self, action_id, action)
+function M.register_hooks(wrapper)
+end
+
+function M.init(self)
+	self.position = vmath.vector3(0,0,0)
+	self.is_target = false
+	self.current_path = {}
+
+	local spx, spy = tilemap.tile_to_world(self.start_position.x, self.start_position.y)
+	go.set_position(vmath.vector3(spx, spy, self.start_position.z))
+	msg.post(map_config.tilemap_path, "send_pawn", { x = self.start_position.x, y = self.start_position.y })
+
+	table.insert(require("game.pawn.pawn_data").pawn_collection, { url = msg.url() })
+
+	msg.post(".", "acquire_input_focus")
+
+	set_target(self, false)
+end
+
+function M.on_input(self, action_id, action)
 	if self.is_target then
 		local mouse_button_left = action_id == hash("mouse_button_left")
 		if mouse_button_left and action.pressed then
@@ -96,13 +102,13 @@ function on_input(self, action_id, action)
 			-- Корректируем координаты, чтобы оставались в пределах карты
 			tile_x = math.clamp(tile_x, 1, map_config.width)
 			tile_y = math.clamp(tile_y, 1, map_config.height)
-			
+
 			move_to(self, tile_x, tile_y)
 		end
 	end
 end
 
-function on_message(self, message_id, message, sender)
+function M.on_message(self, message_id, message, sender)
 	if message_id == hash("send_pawn_start_position") then
 		go.set_position(vmath.vector3(message.x, message.y, self.start_position.z))
 		self.position = self.start_position
@@ -118,3 +124,5 @@ function on_message(self, message_id, message, sender)
 		end
 	end
 end
+
+return M

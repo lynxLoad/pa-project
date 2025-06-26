@@ -19,6 +19,7 @@ scale_mode = stretch
 
 [project]
 title = Empty project
+custom_resources = mod
 dependencies#0 = https://github.com/Insality/defold-event/archive/refs/tags/11.zip
 dependencies#1 = https://github.com/subsoap/defos/archive/refs/tags/v2.8.3.zip
 dependencies#2 = https://github.com/selimanac/defold-astar/archive/master.zip

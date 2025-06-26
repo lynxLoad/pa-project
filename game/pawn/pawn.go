@@ -1,6 +1,6 @@
 components {
   id: "pawn"
-  component: "/game/pawn/pawn.script"
+  component: "/game/time/pawn.script"
 }
 embedded_components {
   id: "sprite"
