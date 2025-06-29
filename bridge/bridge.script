@@ -1,23 +1,21 @@
 -- bridge.script
-go.property("script_path", hash("/path/to/module.lua"))
+go.property("script_path", hash(""))
+local mloader = require("bridge.mloader")
 
 local data = {}
 
--- Создаем wrapper для каждого экземпляра
+-- Создаем wrapper для каждого экземпляра pawn
 local wrapper = {
 	hooks = {
 		init = {},
 		final = {},
 		update = {},
+		fixed_update = {},
 		on_message = {},
 		on_input = {},
 		on_reload = {}
 	},
 	register_hook = function(self, event, callback)
-		if not self.hooks[event] then
-			print("Warning: Unknown hook event " .. tostring(event))
-			return
-		end
 		table.insert(self.hooks[event], callback)
 	end,
 	call_hooks = function(self, event, ...)
@@ -28,13 +26,16 @@ local wrapper = {
 		for _, callback in ipairs(self.hooks[event] or {}) do
 			local ok, err = pcall(callback, ...)
 			if not ok then
-				print("Error in hook for " .. event .. ": " .. tostring(err))
+				error("Error in hook for " .. event .. ": " .. tostring(err))
 			end
 		end
 	end
 }
 
 function init(self)
+	data = mloader.mload(tostring(self.script_path):match("%[(.-)%]"))
+	--data = mloader.mload("/game/pawn/spawner.lua")
+
 	self.data = data
 	self.data._wrapper = wrapper
 
@@ -46,7 +47,7 @@ function init(self)
 		self.data.register_hooks(wrapper)
 	end
 
-	wrapper:call_hooks("init", self)
+	self.data._wrapper:call_hooks("init", self)
 end
 
 function final(self)

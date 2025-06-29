@@ -1,16 +1,7 @@
-components {
-  id: "pawn"
-  component: "/bridge/bridge.script"
-  properties {
-    id: "script_path"
-    value: "game.pawn.pawn"
-    type: PROPERTY_TYPE_HASH
-  }
-}
 embedded_components {
   id: "sprite"
   type: "sprite"
-  data: "default_animation: \"pawn\"\n"
+  data: "default_animation: \"empty\"\n"
   "material: \"/builtins/materials/sprite.material\"\n"
   "textures {\n"
   "  sampler: \"texture_sampler\"\n"

@@ -1,6 +1,6 @@
 -- pawn.script
 go.property("start_position", vmath.vector3(1, 1, 0))
-go.property("script_path", hash("game.pawn.pawn"))
+go.property("script_path", hash("/game/pawn/pawn.lua"))
 
 local pawn --= require("game.pawn.pawn")
 
@@ -34,15 +34,8 @@ local wrapper = {
 }
 
 function init(self)
-	local hash_str = tostring(self.script_path)
-	local path = hash_str:match("hash: %[(.-)%]")
-	if not path then
-		error("Failed to extract module path from hash: " .. hash_str)
-	end
-	print(path == "game.pawn.pawn")
-
-	local test = "game.pawn.pawn"
-	pawn = require(tostring(self.script_path):match("hash: %[(.-)%]"))
+	-- "game.pawn.pawn"
+	pawn = require("game_bridge.file_loader").mload("/game/pawn/pawn.lua")
 	
 	-- Сохраняем wrapper и модуль в self.data
 	self.data = pawn

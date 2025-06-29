@@ -76,13 +76,18 @@ function M.register_hooks(wrapper)
 end
 
 function M.init(self)
+	local mloader = require("bridge.mloader")
+	local spawner = mloader.mload("/game/pawn/spawner.lua")
+	local start_position = spawner.positions[1]
+	table.remove(spawner.positions, 1)
+	
 	self.position = vmath.vector3(0,0,0)
 	self.is_target = false
 	self.current_path = {}
 
-	local spx, spy = tilemap.tile_to_world(self.start_position.x, self.start_position.y)
-	go.set_position(vmath.vector3(spx, spy, self.start_position.z))
-	msg.post(map_config.tilemap_path, "send_pawn", { x = self.start_position.x, y = self.start_position.y })
+	local spx, spy = tilemap.tile_to_world(start_position.x, start_position.y)
+	go.set_position(vmath.vector3(spx, spy, 1))
+	msg.post(map_config.tilemap_path, "send_pawn", { x = start_position.x, y = start_position.y })
 
 	table.insert(require("game.pawn.pawn_data").pawn_collection, { url = msg.url() })
 

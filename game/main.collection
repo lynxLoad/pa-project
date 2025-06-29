@@ -3,26 +3,6 @@ instances {
   id: "camera"
   prototype: "/game/camera/camera.go"
 }
-instances {
-  id: "pawn"
-  prototype: "/game/pawn/pawn.go"
-  position {
-    x: 21.0
-    y: 21.0
-  }
-  component_properties {
-    id: "pawn"
-    properties {
-      id: "start_position"
-      value: "2.0, 1.0, 0.0"
-      type: PROPERTY_TYPE_VECTOR3
-    }
-  }
-}
-instances {
-  id: "pawn1"
-  prototype: "/game/pawn/pawn.go"
-}
 scale_along_z: 0
 embedded_instances {
   id: "tilemap"
@@ -89,9 +69,18 @@ embedded_instances {
 }
 embedded_instances {
   id: "pawns"
-  children: "pawn"
-  children: "pawn1"
-  data: ""
+  data: "components {\n"
+  "  id: \"instancer\"\n"
+  "  component: \"/game/instancer/instancer.script\"\n"
+  "}\n"
+  "embedded_components {\n"
+  "  id: \"basefactory\"\n"
+  "  type: \"factory\"\n"
+  "  data: \"prototype: \\\"/game/base/base.go\\\"\\n"
+  "load_dynamically: true\\n"
+  "\"\n"
+  "}\n"
+  ""
   position {
     z: 1.0
   }
