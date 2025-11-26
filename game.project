@@ -1,15 +1,13 @@
 [bootstrap]
-main_collection = /game/main.collectionc
-render = /game_settings/render/render.renderc
+main_collection = /game/world/world.collectionc
 
 [script]
 shared_state = 1
 
 [display]
 width = 960
-height = 540
+height = 640
 high_dpi = 1
-vsync = 0
 
 [android]
 input_method = HiddenInputField
@@ -18,22 +16,20 @@ input_method = HiddenInputField
 scale_mode = stretch
 
 [project]
-title = Empty project
-custom_resources = game
-dependencies#0 = https://github.com/Insality/defold-event/archive/refs/tags/11.zip
-dependencies#1 = https://github.com/subsoap/defos/archive/refs/tags/v2.8.3.zip
-dependencies#2 = https://github.com/selimanac/defold-astar/archive/master.zip
+title = My Project
+dependencies#0 = https://github.com/Insality/druid/archive/refs/tags/1.1.6.zip
+dependencies#1 = https://github.com/Insality/defold-event/archive/refs/tags/12.zip
 
 [graphics]
 default_texture_min_filter = nearest
 default_texture_mag_filter = nearest
 
-[label]
-max_count = 1024
-
-[tilemap]
-max_tile_count = 100048
-
 [input]
 game_binding = /builtins/input/all.input_bindingc
+
+[tilemap]
+max_tile_count = 100000
+
+[native_extension]
+app_manifest = /appmanifest.appmanifest
 

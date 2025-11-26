@@ -1,0 +1,85 @@
+fonts {
+  name: "default"
+  font: "/builtins/fonts/default.font"
+}
+nodes {
+  size {
+    x: 960.0
+    y: 640.0
+  }
+  type: TYPE_BOX
+  id: "container"
+  xanchor: XANCHOR_LEFT
+  yanchor: YANCHOR_BOTTOM
+  pivot: PIVOT_SW
+  inherit_alpha: true
+  clipping_mode: CLIPPING_MODE_STENCIL
+  alpha: 0.0
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  position {
+    x: 60.0
+    y: 35.0
+  }
+  size {
+    x: 100.0
+    y: 50.0
+  }
+  type: TYPE_BOX
+  id: "box1"
+  xanchor: XANCHOR_LEFT
+  yanchor: YANCHOR_BOTTOM
+  parent: "container"
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  position {
+    x: 60.0
+    y: 88.0
+  }
+  size {
+    x: 100.0
+    y: 50.0
+  }
+  type: TYPE_BOX
+  id: "box"
+  xanchor: XANCHOR_LEFT
+  yanchor: YANCHOR_BOTTOM
+  parent: "container"
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  position {
+    x: 163.0
+    y: 35.0
+  }
+  size {
+    x: 100.0
+    y: 50.0
+  }
+  type: TYPE_BOX
+  id: "box2"
+  xanchor: XANCHOR_LEFT
+  yanchor: YANCHOR_BOTTOM
+  parent: "container"
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  position {
+    x: 163.0
+    y: 88.0
+  }
+  size {
+    x: 100.0
+    y: 50.0
+  }
+  type: TYPE_BOX
+  id: "box3"
+  xanchor: XANCHOR_LEFT
+  yanchor: YANCHOR_BOTTOM
+  parent: "container"
+  size_mode: SIZE_MODE_AUTO
+}
+material: "/builtins/materials/gui.material"
+adjust_reference: ADJUST_REFERENCE_PARENT

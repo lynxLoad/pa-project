@@ -1,0 +1,12 @@
+
+local entity = require("game.entity.entity")
+
+function init(self)
+	entity.tilemap.id = factory.create("#tilemapfactory")
+	entity.tilemap.component = msg.url(nil, entity.tilemap.id, "tilemap")
+	
+	entity.camera.id = factory.create("#camerafactory")
+	entity.camera.component = msg.url(nil, entity.camera.id, "camera")
+
+	factory.create("#pawnfactory", nil, nil, { start_x = 5, start_y = 6, type = hash("worker") })
+end

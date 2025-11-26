@@ -1,6 +1,0 @@
-go.property("mask", 0)
-
-function init(self)
-	self.time = 1
-	label.set_text("#label", self.mask)
-end

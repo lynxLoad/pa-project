@@ -1,9 +1,0 @@
----@class widget.{COMPONENT_TYPE}: druid.widget
-local M = {}
-
-
-function M:init()
-end
-
-
-return M

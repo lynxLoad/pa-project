@@ -1,20 +1,18 @@
 components {
   id: "pawn"
-  component: "/bridge/bridge.script"
-  properties {
-    id: "script_path"
-    value: "game.pawn.pawn"
-    type: PROPERTY_TYPE_HASH
-  }
+  component: "/game/pawn/pawn.script"
 }
 embedded_components {
   id: "sprite"
   type: "sprite"
-  data: "default_animation: \"pawn\"\n"
+  data: "default_animation: \"1down\"\n"
   "material: \"/builtins/materials/sprite.material\"\n"
   "textures {\n"
   "  sampler: \"texture_sampler\"\n"
-  "  texture: \"/assets/sprites/atlas.atlas\"\n"
+  "  texture: \"/assets/res/character.tilesource\"\n"
   "}\n"
   ""
+  position {
+    y: 5.0
+  }
 }

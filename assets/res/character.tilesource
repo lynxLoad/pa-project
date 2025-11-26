@@ -1,0 +1,18 @@
+image: "/assets/images/characters.png"
+tile_width: 32
+tile_height: 32
+animations {
+  id: "1down"
+  start_tile: 1
+  end_tile: 1
+  playback: PLAYBACK_NONE
+  fps: 0
+}
+animations {
+  id: "1up"
+  start_tile: 2
+  end_tile: 2
+  playback: PLAYBACK_NONE
+  fps: 0
+}
+extrude_borders: 2

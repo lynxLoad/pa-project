@@ -1,4 +1,0 @@
-name: "outline"
-tags: "outline"
-vertex_program: "/builtins/materials/sprite.vp"
-fragment_program: "/assets/shaders/outline/outline.fp"
