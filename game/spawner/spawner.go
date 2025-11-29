@@ -16,7 +16,7 @@ embedded_components {
 }
 embedded_components {
   id: "pawnfactory"
-  type: "factory"
-  data: "prototype: \"/game/pawn/pawn.go\"\n"
+  type: "collectionfactory"
+  data: "prototype: \"/game/pawn/pawn.collection\"\n"
   ""
 }

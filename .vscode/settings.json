@@ -1,0 +1,21 @@
+{
+    "[lua]": {
+        "editor.defaultFormatter": "sumneko.lua"
+    },
+    "Lua.runtime.version": "Lua 5.1",
+    "Lua.runtime.pathStrict": true,
+    "Lua.window.statusBar": false,
+    "Lua.completion.callSnippet": "Replace",
+    "Lua.completion.keywordSnippet": "Replace",
+    "Lua.completion.showWord": "Fallback",
+    "Lua.completion.autoRequire": false,
+    "Lua.diagnostics.libraryFiles": "Disable",
+    "Lua.diagnostics.disable": [
+        "lowercase-global",
+        "redefined-local"
+    ],
+    "Lua.workspace.library": [
+        "~\\AppData\\Roaming\\Code\\User\\globalStorage\\astronachos.defold",
+        "~\\AppData\\Roaming\\Code\\User\\workspaceStorage\\1fb9907ac0684e53e83ca34dd7d35ec8\\astronachos.defold"
+    ]
+}

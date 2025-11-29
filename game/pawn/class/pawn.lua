@@ -9,10 +9,10 @@ local STATES = {
 	TASK = "task"
 }
 
-function Pawn.new(pos_x, pos_y, tilemap_data)
+function Pawn.new(pos_x, pos_y, map_data)
 	local self = setmetatable({}, Pawn)
 	
-	self.tilemap_data = tilemap_data
+	self.map_data = map_data
 	self.task = {}
 	self.health = 100
 	self.move_speed = 100
@@ -22,8 +22,8 @@ function Pawn.new(pos_x, pos_y, tilemap_data)
 	self.pos = { x = pos_x, y = pos_y }
 	self.target_pos = {x = 1, y = 1}
 	self.world_pos = {
-		x = self.tilemap_data.tile_size * (self.pos.x - 1) + self.tilemap_data.tile_size / 2, 
-		y = self.tilemap_data.tile_size * (self.pos.y - 1) + self.tilemap_data.tile_size / 2
+		x = self.map_data.tile_size * (self.pos.x - 1) + self.map_data.tile_size / 2, 
+		y = self.map_data.tile_size * (self.pos.y - 1) + self.map_data.tile_size / 2
 	}
 
 	-- State machine
@@ -52,7 +52,7 @@ function Pawn:update(dt)
 	end
 end
 
-function Pawn:on_message(self, message_id, message, sender)
+function Pawn:on_message(message_id, message, sender)
 	-- Прием сообщений
 end
 
@@ -63,7 +63,7 @@ function Pawn:set_state(new_state)
 	self.state = new_state
 	self.state_time = 0
 
-	print("Pawn state changed to:", new_state)
+	--print("Pawn state changed to:", new_state)
 end
 
 function Pawn:update_idle(dt)
@@ -80,18 +80,20 @@ end
 
 function Pawn:update_patrol(dt)
 	-- Ищем доступный путь
-	while true do  -- TODO: может быть и такое, что пешка заперта. Надо будет это учесть
-		self.target_pos.x = math.random(1, self.tilemap_data.width)
-		self.target_pos.y = math.random(1, self.tilemap_data.height)
-		
+	for i = 1, 100 do -- TODO: может быть и такое, что пешка заперта. Надо будет это учесть
+		self.target_pos.x = math.random(1, self.map_data.width)
+		self.target_pos.y = math.random(1, self.map_data.height)
+
 		local path = self:solve_path(self.pos.x, self.pos.y, self.target_pos.x, self.target_pos.y)
 
-		if path then
+		if path and #path > 1 then
+			table.remove(path, 1)
 			self.path = path
 			self:set_state(STATES.MOVING)
-			break
+			return
 		end
 	end
+	self:set_state(STATES.IDLE)
 end
 
 function Pawn:update_moving(dt)
@@ -101,8 +103,32 @@ function Pawn:update_moving(dt)
 	end
 
 	local target_tile = self.path[1]
-	local target_world_pos = { x = self.tilemap_data.tile_size * (target_tile.x - 1) + self.tilemap_data.tile_size / 2, 
-		y = self.tilemap_data.tile_size * (target_tile.y - 1) + self.tilemap_data.tile_size / 2
+
+	local function is_wall_at(x, y)
+		return self.map_data.info_map[y] and 
+		self.map_data.info_map[y][x].is_wall == true
+	end
+
+	-- Проверка целевого тайла
+	if is_wall_at(target_tile.x, target_tile.y) then
+		self:set_state(STATES.IDLE)
+		return
+	end
+-- 
+-- 	-- Проверка диагональных препятствий
+-- 	local sign_dir = { x = math.sign(self.direction.x), y = math.sign(self.direction.y) }
+-- 	if sign_dir.x ~= 0 and sign_dir.y ~= 0 then
+-- 		-- При движении по диагонали блокируем, если есть препятствие
+-- 		-- по одной из осей на пути
+-- 		if is_wall_at(target_tile.x, math.floor(self.pos.y)) or 
+-- 		is_wall_at(math.floor(self.pos.x), target_tile.y) then
+-- 			self:set_state(STATES.IDLE)
+-- 			return
+-- 		end
+-- 	end
+	
+	local target_world_pos = { x = self.map_data.tile_size * (target_tile.x - 1) + self.map_data.tile_size / 2, 
+		y = self.map_data.tile_size * (target_tile.y - 1) + self.map_data.tile_size / 2
 	}
 
 	local delta_x = target_world_pos.x - self.world_pos.x
@@ -179,21 +205,12 @@ function Pawn:solve_path(start_x, start_y, end_x, end_y)
 	local status, size, total_cost, path = astar.solve(start_x, start_y, end_x, end_y, 0)
 
 	if status == astar.SOLVED then
-		print("SOLVED")
-		print("Path Size", size)
-		print("Total Cost:", total_cost)
-
-		for _, tile in ipairs(path) do
-			print("x:", tile.x, "y: ", tile.y, "tile ID: ", tile.id)
-		end
+		return path
 	elseif status == astar.NO_SOLUTION then
-		print("NO_SOLUTION")
 		return nil
 	elseif status == astar.START_END_SAME then
-		print("START_END_SAME")
+		return nil
 	end
-
-	return path
 end
 
 return Pawn

@@ -1,7 +1,7 @@
 
-
-local tilemap_data = require("game.tilemap.tilemap")
+local map_data = require("game.tilemap.map_data")
 local entity = require("game.entity.entity")
+local EventManager = require("game.management.EventManager")
 
 local Map = require("game.tilemap.autotiling.autotiling")
 
@@ -14,27 +14,38 @@ local drag_state = {
 	start = {x = 0, y = 0},
 	last_tile = {x = 0, y = 0}
 }
-local reversed_plan = (function ()
-	local reversed = {}
-	for mask, id in pairs(require("game.tilemap.autotiling.bitmask_map").plan) do
-		reversed[id] = mask
+local reversed_bitmask_map = (function ()
+	local inverted = {}
+	local original = require("game.tilemap.autotiling.bitmask_map")
+
+	-- Объединяем все категории в одну плоскую таблицу
+	for category, tiles in pairs(original) do
+		for mask, id in pairs(tiles) do
+			inverted[id] = mask  -- id -> mask для всех категорий
+		end
 	end
-	return reversed
+
+	return inverted
 end)()
 
 function init(self)
 	msg.post(".", "acquire_input_focus")
-	
+
 	math.randomseed(os.time())
 
 	local _, _, w, h = tilemap.get_bounds("#tilemap")
 	walls:init("walls", tilemap.get_tiles("#tilemap", "walls"), w, h)
-	plan:init("plan", tilemap.get_tiles("#tilemap", "plan"), w, h)
-	tilemap_data.width, tilemap_data.height = w, h
+	plan:init("plan", tilemap.get_tiles("#tilemap", "plan"), w, h, true)
+	map_data.width, map_data.height = w, h
 
 	local grass_tiles = {35,36,44,45,53,54}
 	for y=1, h do
 		for x=1, w do
+			if not map_data.info_map[y] then
+				map_data.info_map[y] = {}
+			end
+			map_data.info_map[y][x] = { is_wall = false, is_building = false, build_progress = 0 }
+			
 			local grass_chance = math.random()
 			if grass_chance < .1 then
 				local flip = math.random()
@@ -46,7 +57,7 @@ function init(self)
 			else
 				tilemap.set_tile("#tilemap", "ground", x, y, 27)
 			end
-			table.insert(tilemap_data.astar_map, 0)
+			table.insert(map_data.astar_map, 0)
 		end
 	end
 	setup_astar()
@@ -58,12 +69,12 @@ function on_input(self, action_id, action)
 	local world = vmath.screen_to_world(action.x, action.y, 0, camera.get_projection(entity.camera.component), camera.get_view(entity.camera.component))
 
 	local x, y = world.x, world.y
-	local tile_x, tile_y = tilemap.world_to_tile(x, y, tilemap_data.tile_size)
+	local tile_x, tile_y = tilemap.world_to_tile(x, y, map_data.tile_size)
 
 	-- Обработка отпускания кнопки мыши
 	if drag_state.is_drag then
 		-- Завершаем перетаскивание и создаем регион
-		create_region(plan, "plan", "plan", drag_state.start, {x = tile_x, y = tile_y})
+		create_line(plan, "plan", "plan", drag_state.start, {x = tile_x, y = tile_y})
 	end
 
 	-- Обработка нажатия кнопки мыши
@@ -76,44 +87,95 @@ function on_input(self, action_id, action)
 			drag_state.last_tile.y = tile_y
 		end
 		if action.released then
+			local build_map = {}
+			for y=1,plan.map.height do
+				for x=1,plan.map.width do
+					local xy = key(x, y)
+					local id = plan.map.data[y][x]
+					
+					if id and id ~= -1 then
+						local bitmask = reversed_bitmask_map[id]
+					
+						-- Если для этой маски еще нет массива, создаем его
+						if not build_map[bitmask] then
+							build_map[bitmask] = {}
+						end
+						
+						-- Добавляем координату в массив для этой маски
+						table.insert(build_map[bitmask], xy)
+					end
+				end
+			end
+
+			-- Создаем отсортированный массив
+			local sorted_build_map = {}
+			for bitmask, xy_array in pairs(build_map) do
+				table.insert(sorted_build_map, {
+					bitmask = bitmask, 
+					xy_array = xy_array  -- теперь это массив координат
+				})
+			end
+
+			table.sort(sorted_build_map, function(a, b)
+				return a.bitmask > b.bitmask  -- Сортировка по убыванию
+			end)
+
+			map_data.build_map = sorted_build_map
+			
+			if #map_data.build_map > 0 then
+				EventManager.call_build_event()
+			end
+
+			-- Для проверки можно вывести количество координат для каждой маски
+			-- for i, mask_data in ipairs(build_map) do
+			-- 	print("-------------------------")
+			-- 	print("Маска", mask_data.bitmask, "имеет", #mask_data.xy_array, "координат:")
+			-- 	for j, xy in ipairs(mask_data.xy_array) do
+			-- 		print("  " .. j .. ": " .. tostring(xy))
+			-- 	end
+			-- 	print("-------------------------")
+			-- end
+
 			drag_state.is_drag = false
 			created_tiles = {}
 		end
 	end
 end
 
-function new_tile(map, tileset, layer, x, y, update_astar)
+function new_tile(map, tileset, layer, x, y, update)
 	local updated_tiles = map:new_tile(tileset, x, y)
 
 	for _, ut in ipairs(updated_tiles) do
 		tilemap.set_tile("#tilemap", layer, ut.x, ut.y, ut.tile_id)
-
-		if update_astar == true then
-			local index = coord_to_index(ut.x, ut.y, tilemap_data.width)
-			tilemap_data.astar_map[index] = 1
-			astar.set_map(tilemap_data.astar_map, 0)
-		end
+	end
+	
+	if update == true then
+		local index = coord_to_index(x, y, map_data.width)
+		map_data.info_map[y][x] = { is_wall = true, is_building = false, build_progress = 1 }
+		map_data.astar_map[index] = 1
+		astar.set_map(map_data.astar_map, 0)
 	end
 end
 
-function remove_tile(map, tileset, layer, x, y, update_astar)
+function remove_tile(map, tileset, layer, x, y, update)
 	local updated_tiles = map:remove_tile(tileset, x, y)
 	tilemap.set_tile("#tilemap", layer, x, y, 0)
 
 	for _, ut in ipairs(updated_tiles) do
 		tilemap.set_tile("#tilemap", layer, ut.x, ut.y, ut.tile_id)
+	end
 
-		if update_astar == true then
-			local index = coord_to_index(ut.x, ut.y, tilemap_data.width)
-			tilemap_data.astar_map[index] = 0
-			astar.set_map(tilemap_data.astar_map, 0)
-		end
+	if update == true then
+		local index = coord_to_index(x, y, map_data.width)
+		map_data.info_map[y][x] = { is_wall = false, is_building = false, build_progress = 0 }
+		map_data.astar_map[index] = 0
+		astar.set_map(map_data.astar_map, 0)
 	end
 end
 
 function coord_to_index(x, y, width) return (y - 1) * width + x end
 
-local function get_rect_border(start_point, end_point)
+function get_rect_border(start_point, end_point)
 	return
 	math.min(start_point.y, end_point.y),  -- start_y
 	math.max(start_point.y, end_point.y),  -- end_y
@@ -121,23 +183,27 @@ local function get_rect_border(start_point, end_point)
 	math.max(start_point.x, end_point.x)   -- end_x
 end
 
-local function key(x, y)
+function key(x, y)
 	return y .. ":" .. x
 end
 
 -- Обёртка для создания тайла, чтобы отслеживать его
-local function tracked_new_tile(map, tileset, layer, x, y)
-	created_tiles[key(x, y)] = true
-	new_tile(map, tileset, layer, x, y, true)
+function tracked_new_tile(map, tileset, layer, x, y)
+	if walls.map.data[y][x] ~= -1 then
+		return
+	end
+	
+	new_tile(map, tileset, layer, x, y)
+	created_tiles[key(x, y)] = map.map.data[y][x]
 end
 
 -- Обёртка для удаления тайла
-local function tracked_remove_tile(map, tileset, layer, x, y)
-	created_tiles[key(x, y)] = nil
+function tracked_remove_tile(map, tileset, layer, x, y)
 	remove_tile(map, tileset, layer, x, y)
+	created_tiles[key(x, y)] = nil
 end
 
-function create_region(map, tileset, layer, start_point, end_point)
+function create_region(map, tileset, layer, start_point, end_point, fill)
 	local start_y, end_y, start_x, end_x = get_rect_border(start_point, end_point)
 
 	-- 1. Создаём новую границу
@@ -162,17 +228,86 @@ function create_region(map, tileset, layer, start_point, end_point)
 		-- Повторная проверка
 		local inside = (x >= start_x and x <= end_x and y >= start_y and y <= end_y)
 		local border = (x == start_x or x == end_x or y == start_y or y == end_y)
-
-		if not (inside and border) then
+		local fill = (fill and inside) or border
+		
+		if not (fill) then
 			tracked_remove_tile(map, tileset, layer, x, y)
 		end
 	end
 end
 
+function draw_line_bresenham(map, tileset, layer, x1, y1, x2, y2)
+	local dx = math.abs(x2 - x1)
+	local dy = math.abs(y2 - y1)
+	local sx = (x1 < x2) and 1 or -1
+	local sy = (y1 < y2) and 1 or -1
+	local err = dx - dy
+
+	local x, y = x1, y1
+
+	-- Сначала собираем все тайлы, которые должны быть в новой линии
+	local new_tiles = {}
+
+	while true do
+		-- Добавляем тайл в список новых тайлов
+		table.insert(new_tiles, {x = x, y = y})
+
+		-- Проверяем достигли ли конечной точки
+		if x == x2 and y == y2 then
+			break
+		end
+
+		local e2 = 2 * err
+		if e2 > -dy then
+			err = err - dy
+			x = x + sx
+		end
+		if e2 < dx then
+			err = err + dx
+			y = y + sy
+		end
+	end
+
+	-- Удаляем старые тайлы, которые не входят в новую линию
+	for k, _ in pairs(created_tiles) do
+		local y_old, x_old = k:match("^(%d+):(%d+)$")
+		x_old = tonumber(x_old)
+		y_old = tonumber(y_old)
+
+		local found = false
+		for _, tile in ipairs(new_tiles) do
+			if tile.x == x_old and tile.y == y_old then
+				found = true
+				break
+			end
+		end
+
+		if not found then
+			tracked_remove_tile(map, tileset, layer, x_old, y_old)
+		end
+	end
+
+	-- Добавляем новые тайлы
+	for _, tile in ipairs(new_tiles) do
+		if map.map.data[tile.y] and map.map.data[tile.y][tile.x] and map.map.data[tile.y][tile.x] == -1 then
+			tracked_new_tile(map, tileset, layer, tile.x, tile.y)
+		end
+	end
+end
+
+-- Функция для использования в перетаскивании
+function create_line(map, tileset, layer, start_point, end_point)
+	-- Очищаем отслеживаемые тайлы только при начале нового перетаскивания
+	-- (это делается в on_input при нажатии кнопки)
+
+	-- Рисуем линию от начальной до конечной точки
+	draw_line_bresenham(map, tileset, layer, start_point.x, start_point.y, end_point.x, end_point.y)
+end
+
 function setup_astar()
 	-- Настройка A*
 	local direction = astar.DIRECTION_EIGHT -- 8 направлений
-	local allocate = tilemap_data.width * tilemap_data.height
+	local allocate = map_data.width * map_data.height
 	local typical_adjacent = 8
 	local cache = true  -- Optional. Default is true
 	local use_zero = false -- Optional. Default is false = 1 based
@@ -181,9 +316,10 @@ function setup_astar()
 		[0] = {1,1,1,1,
 		1.01,1.01,1.01,1.01},
 	}
+	astar.setup(map_data.width, map_data.height, direction, allocate, typical_adjacent, cache, use_zero, flip_map, 0)
 	astar.new_map_id() -- 0
-	astar.setup(tilemap_data.width, tilemap_data.height, direction, allocate, typical_adjacent, cache, use_zero, flip_map, 0)
-	astar.set_map(tilemap_data.astar_map, 0)
+	astar.map_vflip(0)
+	astar.set_map(map_data.astar_map, 0)
 	astar.set_costs(costs, 0)
 end
 

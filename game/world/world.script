@@ -1,5 +1,7 @@
 function math.clamp(n, min, max) return math.min(math.max(n, min), max) end
 
+function math.sign(x) return x > 0 and 1 or (x < 0 and -1 or 0) end
+
 function vmath.screen_to_world(x, y, z, proj, view)
 	local DISPLAY_WIDTH = sys.get_config_int("display.width")
 	local DISPLAY_HEIGHT = sys.get_config_int("display.height")
@@ -29,4 +31,13 @@ function tilemap.world_to_tile(x, y, ts)
 	local coordx = math.ceil(x / ts)
 	local coordy = math.ceil(y / ts)
 	return coordx, coordy
+end
+
+function table.contains(tbl, value)
+	for _, v in ipairs(tbl) do
+		if v == value then
+			return true
+		end
+	end
+	return false
 end

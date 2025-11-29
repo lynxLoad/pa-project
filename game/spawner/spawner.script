@@ -8,5 +8,11 @@ function init(self)
 	entity.camera.id = factory.create("#camerafactory")
 	entity.camera.component = msg.url(nil, entity.camera.id, "camera")
 
-	factory.create("#pawnfactory", nil, nil, { start_x = 5, start_y = 6, type = hash("worker") })
+	for i=1,25 do
+		local props = {}
+		props[hash("/pawn")] = { start_x = 13, start_y = 9, type = hash("worker") }
+		local pawn_col = collectionfactory.create("#pawnfactory", nil, nil, props)
+		local pawn_go = pawn_col["/pawn"]
+		table.insert(entity["workers"], pawn_go)
+	end
 end

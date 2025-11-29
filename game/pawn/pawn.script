@@ -1,21 +1,17 @@
-
 go.property("start_x", 1)
 go.property("start_y", 1)
 go.property("type", hash("pawn"))
 
-local tilemap_data = require("game.tilemap.tilemap")
+local map_data = require("game.tilemap.map_data")
 local class = require("game.pawn.class.class")
 
 function init(self)
-	self.pawn = class[self.type].new(self.start_x, self.start_y, { 
-		tile_size = tilemap_data.tile_size,
-		height = tilemap_data.height,
-		width = tilemap_data.width 
-	})
+	self.pawn = class[self.type].new(self.start_x, self.start_y, map_data)
 	self.time = 0
 	self.angle = 0
 
 	go.set_position(vmath.vector3(self.pawn.world_pos.x, self.pawn.world_pos.y, -self.pawn.world_pos.y))
+	go.set_parent("sprite", ".", true)
 end
 
 function update(self, dt)
@@ -27,26 +23,23 @@ function update(self, dt)
 
 	if self.pawn.direction.x ~= 0 or self.pawn.direction.y ~= 0 then
 		self.time = self.time + dt * 10
-		rotate_z(self,dt)
+		rotate_z(self, dt)
 	else
 		if self.angle ~= 0 then
 			self.angle = 0
-			go.animate(".", "rotation.z", go.PLAYBACK_ONCE_FORWARD, self.angle, go.EASING_OUTQUAD, .1)
+			go.animate("sprite", "rotation.z", go.PLAYBACK_ONCE_FORWARD, self.angle, go.EASING_OUTQUAD, .1)
 		end
 	end
 end
 
 function on_message(self, message_id, message, sender)
-	self.pawn:on_message(self.pawn, message_id, message, sender)
+	self.pawn:on_message(message_id, message, sender)
 end
 
 function rotate_z(self, dt)
-	local AMPLITUDE = 0.4
+	local AMPLITUDE = 0.5
 	local FREQUENCY = 9
 	self.time = self.time + dt
 	self.angle = math.sin(self.time * AMPLITUDE * 2 * math.pi) * FREQUENCY
-	go.set_rotation(vmath.quat_rotation_z(math.rad(self.angle)))
+	go.set_rotation(vmath.quat_rotation_z(math.rad(self.angle)),"sprite")
 end
-
-
-

@@ -17,12 +17,13 @@ function Map.new()
 end
 
 -- Инициализация карты
-function Map:init(tileset, input_map, width, height)
+function Map:init(tileset, input_map, width, height, based16)
 	self.map = {
 		width = width,
 		height = height,
 		data = {}
 	}
+	self.based16 = based16
 	
 	for y = 1, self.map.height do
 		self.map.data[y] = {}
@@ -97,6 +98,10 @@ function Map:find_mask(x, y)
 	if has_E then mask = mask + DIRECTION_MASKS.E end
 	if has_S then mask = mask + DIRECTION_MASKS.S end
 	if has_W then mask = mask + DIRECTION_MASKS.W end
+
+	if self.based16 then
+		return mask
+	end
 
 	if has_N and has_E and xp <= width and row_next[xp] and row_next[xp] ~= EMPTY_TILE then
 		mask = mask + DIRECTION_MASKS.NE

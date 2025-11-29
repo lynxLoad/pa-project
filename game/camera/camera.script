@@ -1,5 +1,5 @@
 
-local tilemap_data = require("game.tilemap.tilemap")
+local map_data = require("game.tilemap.map_data")
 local entity = require("game.entity.entity")
 
 local BASE_WIDTH = sys.get_config_int("display.width")
@@ -52,8 +52,8 @@ end
 function init(self)
 	msg.post(".", "acquire_input_focus")
 	
-	map_width = tilemap_data.width * tilemap_data.tile_size
-	map_height = tilemap_data.height * tilemap_data.tile_size
+	map_width = map_data.width * map_data.tile_size
+	map_height = map_data.height * map_data.tile_size
 
 	self.zoom = BASE_MAX_ZOOM
 
@@ -62,6 +62,8 @@ function init(self)
 
 	self.proj = camera.get_projection(camera_path)
 	self.view = camera.get_view(camera_path)
+
+	go.set_position(vmath.vector3(map_data.width*map_data.tile_size/2,map_data.height*map_data.tile_size/2,0))
 end
 
 function on_message(self, message_id, message)
