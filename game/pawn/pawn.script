@@ -10,17 +10,33 @@ function init(self)
 	self.time = 0
 	self.angle = 0
 
-	go.set_position(vmath.vector3(self.pawn.world_pos.x, self.pawn.world_pos.y, -self.pawn.world_pos.y))
+	-- визуальная позиция — отдельная от логики
+	self.visual_pos = vmath.vector3(self.pawn.world_pos.x, self.pawn.world_pos.y, -self.pawn.world_pos.y)
+
+	go.set_position(self.visual_pos)
 	go.set_parent("sprite", ".", true)
 end
 
 function update(self, dt)
 	self.pawn:update(dt)
 
-	if self.pawn.state == "moving" then
-		go.set_position(vmath.vector3(self.pawn.world_pos.x, self.pawn.world_pos.y, -self.pawn.world_pos.y))
-	end
+	--------------------------------------------------------------------
+	-- VISUAL LERP ------------------------------------------------------
+	--------------------------------------------------------------------
+	local target_world_pos = vmath.vector3(
+	self.pawn.world_pos.x,
+	self.pawn.world_pos.y,
+	-self.pawn.world_pos.y)
+	
+	-- скорость сглаживания (чем больше — тем быстрее догоняет)
+	local SMOOTH = 20
 
+	self.visual_pos = self.visual_pos + (target_world_pos - self.visual_pos) * SMOOTH * dt
+	go.set_position(self.visual_pos)
+
+	--------------------------------------------------------------------
+	-- Визуальный wiggle (анимация шага) -------------------------------
+	--------------------------------------------------------------------
 	if self.pawn.direction.x ~= 0 or self.pawn.direction.y ~= 0 then
 		self.time = self.time + dt * 10
 		rotate_z(self, dt)
@@ -41,5 +57,5 @@ function rotate_z(self, dt)
 	local FREQUENCY = 9
 	self.time = self.time + dt
 	self.angle = math.sin(self.time * AMPLITUDE * 2 * math.pi) * FREQUENCY
-	go.set_rotation(vmath.quat_rotation_z(math.rad(self.angle)),"sprite")
+	go.set_rotation(vmath.quat_rotation_z(math.rad(self.angle)), "sprite")
 end

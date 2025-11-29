@@ -2,11 +2,15 @@ local Pawn = {}
 Pawn.__index = Pawn
 
 -- Состояния
-local STATES = {
+Pawn.STATES = {
 	IDLE = "idle",
 	PATROL = "patrol",
 	MOVING = "moving",
 	TASK = "task"
+}
+Pawn.TASK_TYPES = {
+	BUILD = "build",
+	MOVE = "move"
 }
 
 function Pawn.new(pos_x, pos_y, map_data)
@@ -27,7 +31,7 @@ function Pawn.new(pos_x, pos_y, map_data)
 	}
 
 	-- State machine
-	self.state = STATES.IDLE
+	self.state = Pawn.STATES.IDLE
 	self.state_time = 0
 
 	return self
@@ -36,18 +40,18 @@ end
 function Pawn:update(dt)
 	self.state_time = self.state_time + dt
 
-	if #self.task > 0 then
-		self:set_state(STATES.TASK)
+	if #self.task > 0 and self.state ~= Pawn.STATES.MOVING then
+		self:set_state(Pawn.STATES.TASK)
 	end
 
 	-- Обработка текущего состояния
-	if self.state == STATES.IDLE then
+	if self.state == Pawn.STATES.IDLE then
 		self:update_idle(dt)
-	elseif self.state == STATES.PATROL then
+	elseif self.state == Pawn.STATES.PATROL then
 		self:update_patrol(dt)
-	elseif self.state == STATES.MOVING then
+	elseif self.state == Pawn.STATES.MOVING then
 		self:update_moving(dt)
-	elseif self.state == STATES.TASK then
+	elseif self.state == Pawn.STATES.TASK then
 		self:update_task(dt)
 	end
 end
@@ -69,117 +73,213 @@ end
 function Pawn:update_idle(dt)
 	-- После некоторого времени бездействия начинаем патрулирование
 	self.direction = { x = 0, y = 0 }
+	print(self.state_time)
 	if self.state_time > 1 then
 		if #self.task > 0 then
-			self:set_state(STATES.TASK)
+			self:set_state(Pawn.STATES.TASK)
 		else
-			self:set_state(STATES.PATROL)
+			self:set_state(Pawn.STATES.PATROL)
 		end
 	end
 end
 
 function Pawn:update_patrol(dt)
-	-- Ищем доступный путь
-	for i = 1, 100 do -- TODO: может быть и такое, что пешка заперта. Надо будет это учесть
-		self.target_pos.x = math.random(1, self.map_data.width)
-		self.target_pos.y = math.random(1, self.map_data.height)
+	-- Определяем радиус поиска
+	local search_radius = 10
 
-		local path = self:solve_path(self.pos.x, self.pos.y, self.target_pos.x, self.target_pos.y)
+	-- Ищем доступный путь в пределах радиуса
+	for i = 1, 100 do
+		-- Генерируем точку в квадратной области вокруг пешки
+		local min_x = math.max(1, self.pos.x - search_radius)
+		local max_x = math.min(self.map_data.width, self.pos.x + search_radius)
+		local min_y = math.max(1, self.pos.y - search_radius)
+		local max_y = math.min(self.map_data.height, self.pos.y + search_radius)
 
-		if path and #path > 1 then
-			table.remove(path, 1)
-			self.path = path
-			self:set_state(STATES.MOVING)
+		self.target_pos.x = math.random(min_x, max_x)
+		self.target_pos.y = math.random(min_y, max_y)
+
+		-- Проверяем, что целевая точка отличается от текущей
+		if self.target_pos.x ~= self.pos.x or self.target_pos.y ~= self.pos.y then
+			local path = self:solve_path(self.pos.x, self.pos.y, self.target_pos.x, self.target_pos.y)
+
+			if path and #path > 1 then
+				table.remove(path, 1)
+				self.path = path
+				self:set_state(Pawn.STATES.MOVING)
+				return
+			end
+		end
+	end
+
+	self:set_state(Pawn.STATES.IDLE)
+end
+
+-- Вставь это вместо твоего update_moving
+function Pawn:update_moving(dt)
+	-- Если пути нет — прекращаем движение
+	if not self.path or #self.path == 0 then
+		if self.task[1] and self.task[1].type == Pawn.TASK_TYPES.MOVE then
+			table.remove(self.task, 1)
+		end
+
+		if #self.task > 0 then
+			self:set_state(Pawn.STATES.TASK)
+		else
+			self:set_state(Pawn.STATES.IDLE)
+		end
+		return
+	end
+
+	----------------------------------------------------------------------
+	-- Берём текущий целевой тайл из path (убедимся, что path начинается НЕ с текущего тайла)
+	----------------------------------------------------------------------
+	local tile_size = self.map_data.tile_size
+
+	-- Если path[1] равен текущему тайлу — удалим его (чтобы целевой тайл был "следующим")
+	local first = self.path[1]
+	if first and first.x == self.pos.x and first.y == self.pos.y then
+		table.remove(self.path, 1)
+		-- если путь опустел после удаления — обработаем как окончание
+		if not self.path or #self.path == 0 then
+			if self.task[1] and self.task[1].type == Pawn.TASK_TYPES.MOVE then
+				table.remove(self.task, 1)
+			end
+			if #self.task > 0 then
+				self:set_state(Pawn.STATES.TASK)
+			else
+				self:set_state(Pawn.STATES.IDLE)
+			end
 			return
 		end
 	end
-	self:set_state(STATES.IDLE)
-end
-
-function Pawn:update_moving(dt)
-	if #self.path == 0 then
-		self:set_state(STATES.IDLE)
-		return
-	end
 
 	local target_tile = self.path[1]
-
-	local function is_wall_at(x, y)
-		return self.map_data.info_map[y] and 
-		self.map_data.info_map[y][x].is_wall == true
-	end
-
-	-- Проверка целевого тайла
-	if is_wall_at(target_tile.x, target_tile.y) then
-		self:set_state(STATES.IDLE)
+	if not target_tile then
+		-- нечего делать
+		self.path = {}
+		self:set_state(Pawn.STATES.IDLE)
 		return
 	end
--- 
--- 	-- Проверка диагональных препятствий
--- 	local sign_dir = { x = math.sign(self.direction.x), y = math.sign(self.direction.y) }
--- 	if sign_dir.x ~= 0 and sign_dir.y ~= 0 then
--- 		-- При движении по диагонали блокируем, если есть препятствие
--- 		-- по одной из осей на пути
--- 		if is_wall_at(target_tile.x, math.floor(self.pos.y)) or 
--- 		is_wall_at(math.floor(self.pos.x), target_tile.y) then
--- 			self:set_state(STATES.IDLE)
--- 			return
--- 		end
--- 	end
-	
-	local target_world_pos = { x = self.map_data.tile_size * (target_tile.x - 1) + self.map_data.tile_size / 2, 
-		y = self.map_data.tile_size * (target_tile.y - 1) + self.map_data.tile_size / 2
-	}
 
-	local delta_x = target_world_pos.x - self.world_pos.x
-	local delta_y = target_world_pos.y - self.world_pos.y
-	local distance_squared = delta_x * delta_x + delta_y * delta_y
+	-- Валидность тайла (если нужно, можно убрать, но оставлю защиту)
+	if not self.map_data.info_map[target_tile.y] or not self.map_data.info_map[target_tile.y][target_tile.x] then
+		self.path = {}
+		self:set_state(Pawn.STATES.IDLE)
+		return
+	end
 
-	local arrival_threshold = 25
+	if self.map_data.info_map[target_tile.y][target_tile.x].is_wall then
+		-- путь сломан, прекращаем
+		self.path = {}
+		self:set_state(Pawn.STATES.IDLE)
+		return
+	end
 
-	if distance_squared < arrival_threshold then
-		-- Достигли цели, обновляем позицию и переходим к следующей точке
-		self.pos = {x = target_tile.x, y = target_tile.y}
+	----------------------------------------------------------------------
+	-- Рассчёт мировых координат центра целевого тайла
+	----------------------------------------------------------------------
+	local target_world_x = (target_tile.x - 1) * tile_size + tile_size * 0.5
+	local target_world_y = (target_tile.y - 1) * tile_size + tile_size * 0.5
 
+	----------------------------------------------------------------------
+	-- Вектор до цели и защита от деления на ноль
+	----------------------------------------------------------------------
+	local dx = target_world_x - self.world_pos.x
+	local dy = target_world_y - self.world_pos.y
+	local dist_sq = dx*dx + dy*dy
+
+	-- Если уже практически в центре — считаем достигшим
+	local ARRIVE_DIST = tile_size * 0.2
+	if dist_sq <= ARRIVE_DIST * ARRIVE_DIST then
+		-- Устанавливаем точную tile-позицию (pos) и world_pos в центр целевого тайла
+		self.pos.x = target_tile.x
+		self.pos.y = target_tile.y
+		-- Синхронизируем world_pos аккуратно (без "прыжков"): прямой присвоение допустим, 
+		-- т.к. визуально мы уже очень близко (меньше ARRIVE_DIST)
+		self.world_pos.x = target_world_x
+		self.world_pos.y = target_world_y
+
+		-- Удаляем первый элемент пути
+		table.remove(self.path, 1)
+
+		-- Завершаем или продолжаем
+		if #self.path == 0 then
+			if self.task[1] and self.task[1].type == Pawn.TASK_TYPES.MOVE then
+				table.remove(self.task, 1)
+			end
+			if #self.task > 0 then
+				self:set_state(Pawn.STATES.TASK)
+			else
+				self:set_state(Pawn.STATES.IDLE)
+			end
+		end
+
+		return
+	end
+
+	-- dist (положительное)
+	local dist = math.sqrt(dist_sq)
+	-- безопасный target_dir
+	local target_dir_x, target_dir_y = 0, 0
+	if dist > 0 then
+		target_dir_x = dx / dist
+		target_dir_y = dy / dist
+	else
+		-- маловероятно, но защитимся
+		target_dir_x, target_dir_y = 0, 0
+	end
+
+	----------------------------------------------------------------------
+	-- Движение: не позволяем "перепрыгнуть" цель за тик
+	----------------------------------------------------------------------
+	local step = self.move_speed * dt
+
+	-- Если шаг больше или равен расстоянию — добегаем до цели точно этим тиком
+	if step >= dist then
+		-- добегаем ровно до центра целевого тайла
+		self.world_pos.x = target_world_x
+		self.world_pos.y = target_world_y
+
+		-- Обновим pos и удалим тайл как в блоке выше
+		self.pos.x = target_tile.x
+		self.pos.y = target_tile.y
 		table.remove(self.path, 1)
 
 		if #self.path == 0 then
+			if self.task[1] and self.task[1].type == Pawn.TASK_TYPES.MOVE then
+				table.remove(self.task, 1)
+			end
 			if #self.task > 0 then
-				self:set_state(STATES.TASK)
+				self:set_state(Pawn.STATES.TASK)
 			else
-				self:set_state(STATES.IDLE)
+				self:set_state(Pawn.STATES.IDLE)
 			end
 		end
-	else
-		-- Двигаемся к цели
-		local distance = math.sqrt(distance_squared)
-		
-		local target_dir = {
-			x = delta_x / distance,
-			y = delta_y / distance
-		}
 
-		local TURN_SPEED = 12  -- скорость поворота (чем больше — тем резче поворот)
-
-		-- Lerp направления
-		self.direction.x = self.direction.x + (target_dir.x - self.direction.x) * TURN_SPEED * dt
-		self.direction.y = self.direction.y + (target_dir.y - self.direction.y) * TURN_SPEED * dt
-
-		-- Нормализуем
-		local len = math.sqrt(self.direction.x^2 + self.direction.y^2)
-		if len > 0 then
-			self.direction.x = self.direction.x / len
-			self.direction.y = self.direction.y / len
-		end
-
-		self.world_pos.x = self.world_pos.x + self.direction.x * self.move_speed * dt
-		self.world_pos.y = self.world_pos.y + self.direction.y * self.move_speed * dt
+		return
 	end
+
+	----------------------------------------------------------------------
+	-- Иначе двигаемся частично: применяем направление
+	-- Я делаю direction = target_dir (без агрессивного LERP), чтобы
+	-- гарантировать следование по линии к центру тайла.
+	-- Если хочешь плавный поворот — можно заменить на LERP с малой скоростью.
+	----------------------------------------------------------------------
+	self.direction.x = target_dir_x
+	self.direction.y = target_dir_y
+
+	-- Применяем движение
+	self.world_pos.x = self.world_pos.x + self.direction.x * step
+	self.world_pos.y = self.world_pos.y + self.direction.y * step
+
+	-- Обновляем pos в соответствие с world_pos (полезно для логики вне движения)
+	self.pos.x = math.floor(self.world_pos.x / tile_size) + 1
+	self.pos.y = math.floor(self.world_pos.y / tile_size) + 1
 end
 
 function Pawn:update_task(dt)
 	if #self.task == 0 then
-		self:set_state(STATES.IDLE)
+		self:set_state(Pawn.STATES.IDLE)
 		return
 	end
 
@@ -188,13 +288,32 @@ function Pawn:update_task(dt)
 	self:do_task(current_task, dt)
 end
 
+-- Рекомендованное изменение в Pawn:solve_path/в do_task
+-- В do_task мы будем гарантированно удалять первый элемент пути, если он равен текущему тайлу.
 function Pawn:do_task(task, dt)
-	-- Реализация выполнения конкретной задачи
-	-- После выполнения: table.remove(self.task, 1)
+	if task.type == Pawn.TASK_TYPES.MOVE then
+		local path = self:solve_path(self.pos.x, self.pos.y, task.task_pos.x, task.task_pos.y)
+		if path and #path > 0 then
+			-- Если путь начинается с текущего тайла — удаляем
+			if path[1].x == self.pos.x and path[1].y == self.pos.y then
+				table.remove(path, 1)
+			end
+			self.path = path
+			self:set_state(Pawn.STATES.MOVING)
+		else
+			-- нет пути — убираем задачу
+			table.remove(self.task, 1)
+		end
+		return
+	end
 end
 
-function Pawn:add_task(task)
-	table.insert(self.task, task)
+function Pawn:add_task(task, pos)
+	if pos then
+		table.insert(self.task, pos, task)
+	else
+		table.insert(self.task, task)
+	end
 end
 
 function Pawn:take_damage(damage)

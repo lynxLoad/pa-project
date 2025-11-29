@@ -90,7 +90,8 @@ function on_input(self, action_id, action)
 			local build_map = {}
 			for y=1,plan.map.height do
 				for x=1,plan.map.width do
-					local xy = key(x, y)
+					--local xy = key(x, y)
+					local xy = { x = x, y = y }
 					local id = plan.map.data[y][x]
 					
 					if id and id ~= -1 then
