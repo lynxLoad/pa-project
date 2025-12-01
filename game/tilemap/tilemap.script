@@ -74,7 +74,7 @@ function on_input(self, action_id, action)
 	-- Обработка отпускания кнопки мыши
 	if drag_state.is_drag then
 		-- Завершаем перетаскивание и создаем регион
-		create_line(plan, "plan", "plan", drag_state.start, {x = tile_x, y = tile_y})
+		create_region(plan, "plan", "plan", drag_state.start, {x = tile_x, y = tile_y}, true)
 	end
 
 	-- Обработка нажатия кнопки мыши
@@ -154,7 +154,14 @@ function new_tile(map, tileset, layer, x, y, update)
 		local index = coord_to_index(x, y, map_data.width)
 		map_data.info_map[y][x] = { is_wall = true, is_building = false, build_progress = 1 }
 		map_data.astar_map[index] = 1
+		remove_tile(plan, "plan", "plan", x, y)
 		astar.set_map(map_data.astar_map, 0)
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("building") then
+		new_tile(walls, "walls", "walls", message.x, message.y, true)
 	end
 end
 
@@ -230,7 +237,7 @@ function create_region(map, tileset, layer, start_point, end_point, fill)
 		local inside = (x >= start_x and x <= end_x and y >= start_y and y <= end_y)
 		local border = (x == start_x or x == end_x or y == start_y or y == end_y)
 		local fill = (fill and inside) or border
-		
+
 		if not (fill) then
 			tracked_remove_tile(map, tileset, layer, x, y)
 		end
@@ -315,7 +322,7 @@ function setup_astar()
 	local flip_map = false -- Optional. Default is false
 	local costs = {
 		[0] = {1,1,1,1,
-		1.01,1.01,1.01,1.01},
+		2,2,2,2},
 	}
 	astar.setup(map_data.width, map_data.height, direction, allocate, typical_adjacent, cache, use_zero, flip_map, 0)
 	astar.new_map_id() -- 0

@@ -37,7 +37,7 @@ function update(self, dt)
 	--------------------------------------------------------------------
 	-- Визуальный wiggle (анимация шага) -------------------------------
 	--------------------------------------------------------------------
-	if self.pawn.direction.x ~= 0 or self.pawn.direction.y ~= 0 then
+	if self.pawn.state == "moving" then
 		self.time = self.time + dt * 10
 		rotate_z(self, dt)
 	else
